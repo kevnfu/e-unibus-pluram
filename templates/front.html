@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div>
+<!-- Account stuff -->
+{% if user %}
+<a href = "/account"}>{{user.name}}</a>
+|
+<a href = "/logout">Logout</a>
+{% else %}
+<a href="/login">Login</a>
+{% endif %}
+
+</div>
+
+<br><br>
+
+<form method="get">
+    <td class="label">
+		Search:
+	</td>
+	<td>
+		<input type="text" name="q" value="{{q}}">
+	</td>
+</form>
+
+<div>{{message}}</div>
+
+{% for series in series_list %}
+<table>
+    <form method="post">
+    <tr>
+        <td>
+            {% if series.image %}
+            <img src="{{poster_base + series.image}}">
+            {% endif %}
+        </td>
+        <td>
+            {{series.name}}
+        </td>
+        {% if user %}
+        <td>
+            <input type="hidden" name="series_id" value="{{series.key.string_id()}}">
+            <input type="submit" "value"="Add to watchlist">
+        </td>
+        {% endif%}
+    </tr>
+    </form>
+</table>
+{% endfor %}
+
+{% endblock %}

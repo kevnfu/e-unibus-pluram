@@ -1,0 +1,7 @@
+.submit_link{
+    background: none;
+    border: none;
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
+}

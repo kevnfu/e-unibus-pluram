@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% for series in series_list %}
+<table>
+    <form method=post>
+    <tr>
+        <td>
+            {{series.name}}
+        </td>
+        {% if user %}
+        <td>
+            <input type="submit" 
+            name="{{series.id}} "value="Add to watchlist">
+        </td>
+        {% endif%}
+    </tr>
+    </form>
+</table>
+{% endfor %}
+
+{% endblock %}

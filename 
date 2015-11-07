@@ -1,0 +1,197 @@
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mnew file mode 100644[m
+[1mindex 0000000..f6628a4[m
+[1m--- /dev/null[m
+[1m+++ b/.gitignore[m
+[36m@@ -0,0 +1 @@[m
+[32m+[m[32msecret/[m
+\ No newline at end of file[m
+[1mdiff --git a/app.yaml b/app.yaml[m
+[1mnew file mode 100644[m
+[1mindex 0000000..b803542[m
+[1m--- /dev/null[m
+[1m+++ b/app.yaml[m
+[36m@@ -0,0 +1,19 @@[m
+[32m+[m[32mapplication: e-unibus-pluram[m
+[32m+[m[32mversion: 1[m
+[32m+[m[32mruntime: python27[m
+[32m+[m[32mapi_version: 1[m
+[32m+[m[32mthreadsafe: yes[m
+[32m+[m
+[32m+[m[32mhandlers:[m
+[32m+[m[32m- url: /static[m
+[32m+[m[32m  static_dir: static[m
+[32m+[m
+[32m+[m[32m- url: .*[m
+[32m+[m[32m  script: main.app[m
+[32m+[m
+[32m+[m[32mlibraries:[m
+[32m+[m[32m- name: webapp2[m
+[32m+[m[32m  version: "2.5.2"[m
+[32m+[m
+[32m+[m[32m- name: jinja2[m
+[32m+[m[32m  version: latest[m
+[1mdiff --git a/appengine_config.py b/appengine_config.py[m
+[1mnew file mode 100644[m
+[1mindex 0000000..71abeed[m
+[1m--- /dev/null[m
+[1m+++ b/appengine_config.py[m
+[36m@@ -0,0 +1,4 @@[m
+[32m+[m[32mfrom google.appengine.ext import vendor[m
+[32m+[m
+[32m+[m[32m# Add any libraries installed in the "lib" folder.[m
+[32m+[m[32mvendor.add('lib')[m
+\ No newline at end of file[m
+[1mdiff --git a/appengine_config.pyc b/appengine_config.pyc[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8ece719[m
+Binary files /dev/null and b/appengine_config.pyc differ
+[1mdiff --git a/database.py b/database.py[m
+[1mnew file mode 100644[m
+[1mindex 0000000..336c18f[m
+[1m--- /dev/null[m
+[1m+++ b/database.py[m
+[36m@@ -0,0 +1,249 @@[m
+[32m+[m[32mfrom google.appengine.ext import ndb[m
+[32m+[m[32mfrom oauth2client.appengine import CredentialsProperty[m
+[32m+[m[32mfrom tmdb import TMDB[m
+[32m+[m[32mfrom datetime import datetime, timedelta[m
+[32m+[m
+[32m+[m[32mclass User(ndb.Model):[m
+[32m+[m[32m    """id is google id"""[m
+[32m+[m[32m    name = ndb.StringProperty(required=True)[m
+[32m+[m
+[32m+[m[32mclass Series(ndb.Model):[m
+[32m+[m[32m    """id is from external db"""[m
+[32m+[m[32m    name = ndb.StringProperty(required=True)[m
+[32m+[m[32m    last_modified = ndb.DateTimeProperty(auto_now=True)[m
+[32m+[m[32m    air_date = ndb.StringProperty()[m
+[32m+[m[32m    imdb_id = ndb.StringProperty()[m
+[32m+[m[32m    image = ndb.StringProperty()[m
+[32m+[m[32m    backdrop = ndb.StringProperty()[m
+[32m+[m[32m    overview = ndb.StringProperty()[m
+[32m+[m[32m    status = ndb.StringProperty()[m
+[32m+[m
+[32m+[m[32m    @classmethod[m
+[32m+[m[32m    def from_json(cls, data):[m
+[32m+[m[32m        if data.get('external_ids'):[m
+[32m+[m[32m            imdb_id = data.get('external_ids').get('imdb_id')[m
+[32m+[m[32m        else:[m
+[32m+[m[32m            imdb_id = ""[m
+[32m+[m
+[32m+[m[32m        series = cls([m
+[32m+[m[32m            id=str(data.get('id')),[m
+[32m+[m[32m            name=data.get('name'),[m
+[32m+[m[32m            air_date=data.get('first_air_date'),[m
+[32m+[m[32m            imdb_id=imdb_id,[m
+[32m+[m[32m            image=data.get('poster_path'),[m
+[32m+[m[32m            backdrop=data.get('backdrop_path'),[m
+[32m+[m[32m            overview=data.get('overview'),[m
+[32m+[m[32m            status=data.get('status'))[m
+[32m+[m[32m        return series[m
+[32m+[m
+[32m+[m[32m    def get_seasons(self):[m
+[32m+[m[32m        """Returns list of seasons"""[m
+[32m+[m[32m        return Season.query(ancestor=self.key).order(Season.number).fetch()[m
+[32m+[m
+[32m+[m[32mclass Season(ndb.Model):[m
+[32m+[m[32m    """Has parent Series"""[m
+[32m+[m[32m    number = ndb.IntegerProperty(required=True)[m
+[32m+[m[32m    last_modified = ndb.DateTimeProperty(auto_now=True)[m
+[32m+[m[32m    air_date = ndb.StringProperty()[m
+[32m+[m[32m    image = ndb.StringProperty()[m
+[32m+[m
+[32m+[m[32m    @classmethod[m
+[32m+[m[32m    def from_json(cls, data, parent):[m
+[32m+[m[32m        season = cls([m
+[32m+[m[32m            id=str(data.get('id')),[m
+[32m+[m[32m            number=data.get('season_number'),[m
+[32m+[m[32m            air_date=data.get('air_date'),[m
+[32m+[m[32m            image=data.get('poster_path'),[m
+[32m+[m[32m            parent=parent.key)[m
+[32m+[m[32m        return season[m
+[32m+[m
+[32m+[m[32m    def get_episodes(self):[m
+[32m+[m[32m        """Retuns list of episodes"""[m
+[32m+[m[32m        return Episode.query(ancestor=self.key).order(Episode.number).fetch()[m
+[32m+[m
+[32m+[m[32mclass Episode(ndb.Model):[m
+[32m+[m[32m    """Has parent Season"""[m
+[32m+[m[32m    # tmdb_id = ndb.IntegerProperty(required=True)[m
+[32m+[m[32m    number = ndb.IntegerProperty(required=True)[m
+[32m+[m[32m    name = ndb.StringProperty(required=True)[m
+[32m+[m[32m    last_modified = ndb.DateTimeProperty(auto_now=True)[m
+[32m+[m[32m    air_date = ndb.StringProperty()[m
+[32m+[m[32m    overview = ndb.StringProperty()[m
+[32m+[m[32m    image = ndb.StringProperty()[m
+[32m+[m
+[32m+[m[32m    @classmethod[m
+[32m+[m[32m    def from_json(cls, data, parent):[m
+[32m+[m[32m        episode = cls([m
+[32m+[m[32m            id=str(data.get('id')),[m
+[32m+[m[32m            number=data.get('episode_number'),[m
+[32m+[m[32m            name=data.get('name'),[m
+[32m+[m[32m            air_date=data.get('air_date'),[m
+[32m+[m[32m            overview=data.get('overview'),[m
+[32m+[m[32m            image=data.get('still_path'),[m
+[32m+[m[32m            parent=parent.key)[m
+[32m+[m[32m        return episode[m
+[32m+[m
+[32m+[m[32mclass Rating(ndb.Model):[m
+[32m+[m[32m    """[m
+[32m+[m[32m    A rating for a series or movie.[m
+[32m+[m[32m    Rating includes the seasons, episodes of a series,[m
+[32m+[m[32m    under the field children.[m
+[32m+[m[32m    """[m
+[32m+[m[32m    rating_type = ndb.IntegerProperty(required=True)[m
+[32m+[m[32m    value = ndb.IntegerProperty(required=True)[m
+[32m+[m[32m    children = ndb.JsonProperty()[m
+[32m+[m[32m    # static fields[m
+[32m+[m[32m    SERIES_TYPE = 0[m
+[32m+[m[32m    SEASON_TYPE = 1[m
+[32m+[m[32m    EPISODE_TYPE = 2[m
+[32m+[m
+[32m+[m[32m    WATCHLIST = 20[m
+[32m+[m[32m    WATCHED = 21[m
+[32m+[m
+[32m+[m[32m    @classmethod[m
+[32m+[m[32m    def get_ratings_for_user(cls, user):[m
+[32m+[m[32m        return (cls[m
+[32m+[m[32m            .query(ancestor=user.key)[m
+[32m+[m[32m            .filter(cls.rating_type==cls.SERIES_TYPE)[m
+[32m+[m[32m            .fetch())[m
+[32m+[m
+[32m+[m[32m    def mark_watched(self, string_id):[m
+[32m+[m[32m        """Needs a put to store."""[m
+[32m+[m[32m        self.children[string_id] = self.WATCHED[m
+[32m+[m[32m        return self[m
+[32m+[m
+[32m+[m[32m    def watched(self, string_id):[m
+[32m+[m[32m        """Returns true if user watched this rating's seasons/episodes"""[m
+[32m+[m[32m        return self.children.get(string_id, 0) == self.WATCHED[m
+[32m+[m
+[32m+[m[32mclass TmdbConfig(ndb.Model):[m
+[32m+[m[32m    """Storage place for config"""[m
+[32m+[m[32m    json = ndb.JsonProperty(required=True)[m
+[32m+[m[32m    last_modified = ndb.DateTimeProperty(auto_now=True)[m
+[32m+[m
+[32m+[m[32m    STRING_ID = 'singleton'[m
+[32m+[m[32m    REFRESH_LATENCY = 30 # days[m
+[32m+[m
+[32m+[m[32m    @classmethod[m
+[32m+[m[32m    def refetch(cls):[m
+[32m+[m[32m        data = TMDB.configuration()[m
+[32m+[m[32m        config = cls(id=cls.STRING_ID, json=data)[m
+[32m+[m[32m        config.put()[m
+[32m+[m[32m        return config[m
+[32m+[m
+[32m+[m[32m    @classmethod[m
+[32m+[m[32m    def get_config(cls):[m
+[32m+[m[32m        """Checks if config current. If not, refetch"""[m
+[32m+[m
+[32m+[m[32m        config = cls.get_by_id(cls.STRING_ID)[m
+[32m+[m
+[32m+[m[32m        if not config:[m
+[32m+[m[32m            return cls.refetch()[m
+[32m+[m
+[32m+[m[32m        if

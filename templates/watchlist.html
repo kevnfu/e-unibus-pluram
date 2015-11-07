@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<a href='/'>Home</a>
+<table>
+{% for series, rating in series_rating_list %}
+    <tr>
+        <td>
+            <div id="{{rating.key.string_id()}}">{{series.name}}</div>
+        <td>
+    </tr>
+    {% for season in series.get_seasons() 
+    if not rating.watched(season.key.string_id()) %}
+    <tr>
+        <td></td>
+        <td><form method="post">
+            <input type="hidden" name="rating_id"
+                value="{{rating.key.string_id()}}">
+            <input type="hidden" name="watched_id" 
+                value="{{season.key.string_id()}}">
+            <input type="submit" class="submit_link"
+                value="Season {{season.number}}">
+        </form></td>
+        <td></td><td></td>
+        <td>{{season.air_date}}</td>
+    </tr>
+        {% for episode in season.get_episodes() 
+        if not rating.watched(episode.key.string_id()) %}
+        <tr>
+            <td></td><td></td>
+            <td>{{episode.number}}.</td>
+            <td><form method="post">
+                <input type="hidden" name="rating_id"
+                    value="{{rating.key.string_id()}}">
+                <input type="hidden" name="watched_id" 
+                    value="{{episode.key.string_id()}}">
+                <input type="submit" class="submit_link" 
+                    value="{{episode.name}}">
+            </form></td>
+            <td>{{episode.air_date}}</td>
+        </tr>
+        {% endfor%}
+    {% endfor %}
+{% endfor %}
+</table>
+<a href='/'>Home</a>
+{% endblock %}

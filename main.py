@@ -57,7 +57,7 @@ def render_str(template, **params):
 class BaseHandler(webapp2.RequestHandler):
     # cookie names
     param_id = 'user-id'
-    #param_name = 'user-name'
+
     def write(self, *a, **kw):
         self.response.out.write(*a, **kw)
 
@@ -91,7 +91,8 @@ class BaseHandler(webapp2.RequestHandler):
 
     def initialize(self, *a, **kw):
         super(BaseHandler, self).initialize(*a, **kw)
-        # get data from cookie
+        # provides every BaseHandler subclass with a reference to the 
+        # current User
         uid = str(self.read_secure_cookie(self.param_id))
         
         if not uid:
@@ -102,14 +103,6 @@ class BaseHandler(webapp2.RequestHandler):
         if not self.user:
             self.user = User.get_by_id(uid)
             memcache.set(uid, self.user)
-
-
-    def get_user_info(self, decorator):
-        service = build('plus', 'v1', http=decorator.http())
-        people_doc = service.people().get(userId='me').execute()
-        uid = str(people_doc.get('id'))
-        name = str(people_doc.get('displayName'))
-        return uid, name
 
 class LoginHandler(BaseHandler):
     @decorator.oauth_aware
@@ -130,8 +123,13 @@ class LoginHandler(BaseHandler):
             logging.info("access token expired")
             cred.refresh(decorator.http())
 
+        # get info w/ oauth2
+        service = build('plus', 'v1', http=decorator.http())
+        people_doc = service.people().get(userId='me').execute()
+        uid = str(people_doc.get('id'))
+        name = str(people_doc.get('displayName'))
+        
         # login user w/ cookie
-        uid, name = self.get_user_info(decorator)
         self.login(uid)
 
         # add user to database if not there
@@ -144,8 +142,11 @@ class LoginHandler(BaseHandler):
         self.redirect('/')
 
 class LogoutHandler(BaseHandler):
+    @decorator.oauth_aware
     def get(self):
-        self.logout()
+        self.logout() # clear cookie
+        cred = decorator.get_credentials()
+        cred.revoke(decorator.http())
         self.redirect('/')
         
 class MainHandler(BaseHandler):
@@ -220,8 +221,17 @@ class WatchlistHandler(BaseHandler):
 
 class TestHandler(BaseHandler):
     def get(self):
-        data = TMDB.search_tv('ouch')
-        self.render_json(data)
+        # data = TMDB.search_tv('ouch')
+        # self.render_json(data)
+
+        database.delete_all_entries()
+
+class DeleteHandler(BaseHandler):
+    def get(self):
+        # data = TMDB.search_tv('ouch')
+        # self.render_json(data)
+
+        database.delete_all_entries()
 
 
 app = webapp2.WSGIApplication([
@@ -230,6 +240,7 @@ app = webapp2.WSGIApplication([
     ('/logout/?', LogoutHandler),
     ('/test/?', TestHandler),
     ('/account/?', AccountHandler),
-    ('/account/watchlist', WatchlistHandler),
+    ('/account/watchlist/?', WatchlistHandler),
+    ('/special/delete/?', DeleteHandler),
     (decorator.callback_path, decorator.callback_handler())
 ], debug=True)

@@ -15,7 +15,7 @@ class Series(ndb.Model):
     imdb_id = ndb.StringProperty()
     image = ndb.StringProperty()
     backdrop = ndb.StringProperty()
-    overview = ndb.StringProperty()
+    overview = ndb.TextProperty()
     status = ndb.StringProperty()
 
     @classmethod
@@ -68,7 +68,7 @@ class Episode(ndb.Model):
     name = ndb.StringProperty(required=True)
     last_modified = ndb.DateTimeProperty(auto_now=True)
     air_date = ndb.StringProperty()
-    overview = ndb.StringProperty()
+    overview = ndb.TextProperty()
     image = ndb.StringProperty()
 
     @classmethod

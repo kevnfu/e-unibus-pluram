@@ -99,6 +99,7 @@ class BaseHandler(webapp2.RequestHandler):
             self.user = None
             return
 
+        # TODO is explicitly caching neccessary after switching to ndb?
         self.user = memcache.get(uid)
         if not self.user:
             self.user = User.get_by_id(uid)
@@ -217,21 +218,54 @@ class WatchlistHandler(BaseHandler):
         self.redirect('/account/watchlist#' + rating_id)
 
 
-
-
 class TestHandler(BaseHandler):
     def get(self):
-        # data = TMDB.search_tv('ouch')
-        # self.render_json(data)
+        self.write('test')
 
+    def sync(self):
+        database.sync_with_tmdb()
+
+    def delete(self):
         database.delete_all_entries()
 
-class DeleteHandler(BaseHandler):
-    def get(self):
-        # data = TMDB.search_tv('ouch')
-        # self.render_json(data)
+    def images(self):
+        q = self.request.get('q')
+        if not q:
+            self.render('images-example.html')
+            return
 
-        database.delete_all_entries()
+        url_list = list()
+        series = Series.query().filter(Series.name==q).get()
+        if not series:
+            self.render('images-example.html', error_msg="Not found.")
+            return
+
+        for i in range(7):
+            desc = "Series poster. Size %d" % i
+            url = TmdbConfig.poster_path(i) + series.image
+            url_list.append((desc, url))
+
+        for i in range(4):
+            desc = "Series backdrop. Size %d" % i
+            url = TmdbConfig.backdrop_path(i) + series.backdrop
+            url_list.append((desc, url))
+
+        season = Season.query(ancestor=series.key).get()
+        if season.image:
+            for i in range(7):
+                desc = "Season %d poster. size %d" % (season.number, i)
+                url = TmdbConfig.poster_path(i) + season.image
+                url_list.append((desc, url))
+
+        episode = Episode.query(ancestor=series.key).get()
+        if episode.image:
+            for i in range(4):
+                desc = "Episode %s poster. size %d" % (episode.name, i)
+                url = TmdbConfig.poster_path(i) + episode.image
+                url_list.append((desc, url))
+
+        self.render('images-example.html', url_list=url_list)
+
 
 
 app = webapp2.WSGIApplication([
@@ -239,8 +273,13 @@ app = webapp2.WSGIApplication([
     ('/login/?', LoginHandler),
     ('/logout/?', LogoutHandler),
     ('/test/?', TestHandler),
+    webapp2.Route('/test/images', handler=TestHandler, 
+        handler_method="images"),
     ('/account/?', AccountHandler),
     ('/account/watchlist/?', WatchlistHandler),
-    ('/special/delete/?', DeleteHandler),
+    webapp2.Route('/special/delete', handler=TestHandler,
+        handler_method="delete"),
+    webapp2.Route('/special/sync', handler=TestHandler,
+        handler_method="sync"),
     (decorator.callback_path, decorator.callback_handler())
 ], debug=True)

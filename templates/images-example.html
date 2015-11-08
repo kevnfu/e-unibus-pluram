@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<a href="/">Home</a><br>
+<div>
+Available images for a show. <br>
+Input an exact name. Must already be added.
+</div>
+<div>    
+    <form method="get">
+        <input type="text" name="q">
+        <input type="submit">
+    </form>
+</div>
+{{error_msg}}
+{% for desc, url in url_list %}
+{{desc}}<br>
+<img src="{{url}}"><br>
+{% endfor %}
+{% endblock %}

@@ -1,11 +1,20 @@
+import logging
+
 from google.appengine.ext import ndb
 from oauth2client.appengine import CredentialsProperty
 from tmdb import TMDB
 from datetime import datetime, timedelta
 
+class AppStat(ndb.Model):
+    """Table for getting data about server"""
+    description = ndb.StringProperty(required=True)
+    value = ndb.IntegerProperty()
+    text = ndb.StringProperty()
+
 class User(ndb.Model):
     """id is google id"""
     name = ndb.StringProperty(required=True)
+    joined = ndb.DateTimeProperty(auto_now_add=True)
 
 class Series(ndb.Model):
     """id is from external db"""
@@ -133,8 +142,7 @@ class TmdbConfig(ndb.Model):
 
     @classmethod
     def get_config(cls):
-        """Checks if config current. If not, refetch"""
-
+        """Checks if config is fresh. If not, refetch"""
         config = cls.get_by_id(cls.STRING_ID)
 
         if not config:
@@ -148,9 +156,32 @@ class TmdbConfig(ndb.Model):
 
     @classmethod
     def poster_path(cls, size):
+        # size between 0-6
         images = cls.get_config().json.get('images')
         return (images.get('base_url') + 
             images.get('poster_sizes')[size])
+
+    @classmethod
+    def backdrop_path(cls, size):
+        # size between 0-3
+        images = cls.get_config().json.get('images')
+        return (images.get('base_url') + 
+            images.get('backdrop_sizes')[size]) 
+
+    @classmethod
+    def still_path(cls, size):
+        # size between 0-3
+        images = cls.get_config().json.get('images')
+        return (images.get('base_url') + 
+            images.get('still_sizes')[size])
+
+
+class UnhandledChanges(Exception):
+    """
+    Raised when don't know what to do about response from
+    TMDB.series_changes
+    """
+    pass
 
 
 class database:
@@ -195,29 +226,83 @@ class database:
             rating_type=Rating.SERIES_TYPE,
             value=Rating.WATCHLIST,
             children=dict()).put()
-
-        # seasons_key_iter = (
-        #     Season.query(ancestor=series.key).iter(keys_only=True))
-        # for season_key in seasons_key_iter:
-        #     series_rating.children.set(
-        #         season_key.string_id, )
-            
-        #     epiosode_key_iter = (
-        #         Episode.query(ancestor=season_key).iter(keys_only=True))
-        #     for episode_key in epiosode_key_iter:
-        #         Rating(
-        #             parent=season_rating.key,
-        #             id=episode_key.string_id(),
-        #             rating_type=Rating.EPISODE_TYPE,
-        #             value=Rating.WATCHLIST).put()
     
     @classmethod
-    def update_series(cls):
-        for series_key in Series.query().fetch(keys_only=True):
-            pass
+    def sync_with_tmdb(cls):
+        """
+        Reloads shows to db that were changed in the last 24 hours
+        """
+        # Create set of all series id in database
+        series_keys = Series.query().fetch(keys_only=True)
+        series_ids = set(map(lambda x: x.string_id(), series_keys))
+
+        # Get changed ids from tmdb
+        changes_ids = TMDB.tv_changes_ids()
+
+        updated_count = AppStat.get_by_id("daily_sync_count")
+        if not updated_count:
+            updated_count = AppStat(id="daily_sync_count", 
+                description="Number of seasons updated last night")
+        updated_count.value = 0
+
+
+        # if a show in db changed, reload
+        for changes_id in changes_ids:
+            if changes_id in series_ids:
+                cls.load_series(changes_id)
+                logging.info("Reloaded series: %s" % changes_id)
+                updated_count.value += 1
+
+        updated_count.put()
+        return
+
+    @staticmethod
+    @ndb.transactional(propagation=ndb.TransactionOptions.ALLOWED)
+    def update_season(season_id, season_number, series):
+        """only called by update_series"""
+        # Refetch season
+        season = Season.from_json(
+            TMDB.season(series.key.string_id(), season_number), parent=series)
+        season.put()
+
+        # Find and update changed episodes
+        changes = TMDB.season_changes(season_id).get('changes')
+        for change in changes:
+            if change.get('key') == 'episode':
+                for action in change.get('items'):
+                    # episode_id = str(action.get('value').get('episode_id'))
+                    episode_num = str(action.get('value').get('episode_number'))
+                    data = TMDB.episode(
+                            tvid=series.key.string_id(),
+                            season_number=season_number,
+                            episode_number=episode_num)
+                    episode = Episode.from_json(data, parent=season)
+                    episode.put()
 
     @classmethod
-    def delete_all_entries(cls):
+    @ndb.transactional
+    def update_series(cls, series_id):
+        """
+        Updates series and its seasons/episodes
+        with TMDB.series_changes()
+        """
+        # Refetch series
+        series = Series.from_json(TMDB.series(series_id))
+        series.put()
+
+        # Find and update changed seasons
+        changed_season_nums = list()
+        changes = TMDB.series_changes(series.key.string_id()).get('changes')
+        for change in changes:
+            if change.get('key') == 'season':
+                for action in change.get('items'):
+                    season_id = str(action.get('value').get('season_id'))
+                    season_number = str(action.get('value').get('season_number'))
+                    cls.update_season(season_id, season_number, series)
+
+
+    @staticmethod
+    def delete_all_entries():
         all_series_keys = Series.query().fetch(keys_only=True)
         all_season_keys = list()
         all_episode_keys = list()
@@ -231,12 +316,15 @@ class database:
         ndb.delete_multi(all_season_keys)
         ndb.delete_multi(all_episode_keys)
 
+        all_user_keys = User.query().fetch(keys_only=True)
         all_rating_keys = list()
-        for user_key in User.query().fetch(keys_only=True):
+        for user_key in all_user_keys:
             all_rating_keys.extend(
                 Rating.query(ancestor=user_key).fetch(keys_only=True))
 
         ndb.delete_multi(all_rating_keys)
+        ndb.delete_multi(all_user_keys)
+
 
 
 

@@ -119,12 +119,12 @@ class LoginHandler(BaseHandler):
             return
 
         # check if still valid
-        cred = decorator.get_credentials()
-        if cred.access_token_expired:
+        credentials = decorator.get_credentials()
+        if credentials.access_token_expired:
             logging.info("access token expired")
-            cred.refresh(decorator.http())
+            credentials.refresh(decorator.http())
 
-        # get info w/ oauth2
+        # get user info w/ oauth2
         service = build('plus', 'v1', http=decorator.http())
         people_doc = service.people().get(userId='me').execute()
         uid = str(people_doc.get('id'))
@@ -133,11 +133,12 @@ class LoginHandler(BaseHandler):
         # login user w/ cookie
         self.login(uid)
 
-        # add user to database if not there
-        if not User.get_by_id(uid):
+        # add user to database
+        if User.get_by_id(uid) is None:
             user = User(
                 id=uid, 
-                name=name)
+                name=name,
+                credentials=credentials)
             user.put()
 
         self.redirect('/')
@@ -153,27 +154,28 @@ class LogoutHandler(BaseHandler):
 class MainHandler(BaseHandler):
     def get(self):
         # render search results
-        q = self.request.get('q')
-        if q:
-            data = TMDB.search_tv(q)
-            if not data:
-                self.render('front.html', 
-                    user=self.user, 
-                    q=q,
-                    message="No Results.")
-                return
-
-            series_list = list()
-            for series_json in data:
-                series_list.append(Series.from_json(series_json))
-
-            self.render('front.html',
-                poster_base=TmdbConfig.poster_path(2),
-                user=self.user, 
-                series_list=series_list)
+        q = self.request.get('q', None)
+        if q is None:
+            self.render('front.html', user=self.user)
             return
 
-        self.render('front.html', user=self.user)
+        data = TMDB.search_tv(q)
+        if data is None:
+            self.render('front.html', 
+                user=self.user, 
+                q=q,
+                message="No Results.")
+            return
+
+        series_list = list()
+        for series_json in data:
+            series_list.append(Series.from_json(series_json))
+
+        self.render('front.html',
+            poster_base=TmdbConfig.poster_path(2),
+            user=self.user, 
+            series_list=series_list)
+            
 
     def post(self):
         # user clicked add to watchlist

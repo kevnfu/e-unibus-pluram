@@ -25,42 +25,42 @@ class TMDB:
     @classmethod
     def fetch_json(cls, url):
         r = urlfetch.fetch(url=url, headers={'Accept':'application/json'})
+        logging.info("urlfetch: %s" % url)
         if r.status_code != 200:
-            logging.error("urlfetch error in TMDB: "+ url)
+            logging.error("urlfetch error in TMDB: %s" % url + "\n" + r.content)
             return None
         data = json.loads(r.content)
         return data
 
     @classmethod
     def search_tv(cls, title):
-        # TODO deal w/ multiple pages
+        # TODO: deal w/ multiple pages
         title = cgi_space_escape(title)
         url = BASE_URL + "/search/tv?api_key={key}&query={title}" 
         url = url.format(title=title, key=API_KEY)
         resp_json = cls.fetch_json(url)
         return resp_json.get('results')
         
-
     @classmethod
-    def series(cls, tvid):
+    def series(cls, series_id):
         url = (BASE_URL + 
-            '/tv/{tvid}?api_key={key}'
+            '/tv/{series_id}?api_key={key}'
             '&append_to_response=external_ids')
-        url = url.format(tvid=str(tvid), key=API_KEY)
+        url = url.format(series_id=str(series_id), key=API_KEY)
         return cls.fetch_json(url)
 
     @classmethod
-    def season(cls, tvid, season_number):
-        url = BASE_URL + '/tv/{tvid}/season/{num}?api_key={key}'
-        url = url.format(tvid=str(tvid), num=str(season_number), key=API_KEY)
+    def season(cls, series_id, season_number):
+        url = BASE_URL + '/tv/{series_id}/season/{num}?api_key={key}'
+        url = url.format(series_id=str(series_id), num=str(season_number), key=API_KEY)
         return cls.fetch_json(url)
 
     @classmethod
-    def episode(cls, tvid, season_number, episode_number):
+    def episode(cls, series_id, season_number, episode_number):
         url = (BASE_URL +
-            '/tv/{tvid}/season/{season_number}'
+            '/tv/{series_id}/season/{season_number}'
             '/episode/{episode_number}?api_key={key}')
-        url = url.format(tvid=str(tvid), season_number=str(season_number), 
+        url = url.format(series_id=str(series_id), season_number=str(season_number), 
             episode_number=str(episode_number), key=API_KEY)
         return cls.fetch_json(url)
 

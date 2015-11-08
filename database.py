@@ -1,7 +1,9 @@
 import logging
-
+import pickle
+from enum import Enum
 from google.appengine.ext import ndb
-from oauth2client.appengine import CredentialsProperty
+from oauth2client.appengine import CredentialsNDBProperty
+
 from tmdb import TMDB
 from datetime import datetime, timedelta
 
@@ -12,91 +14,134 @@ class AppStat(ndb.Model):
     text = ndb.StringProperty()
 
 class User(ndb.Model):
-    """id is google id"""
+    """id is str(google id)"""
     name = ndb.StringProperty(required=True)
     joined = ndb.DateTimeProperty(auto_now_add=True)
+    credentials = CredentialsNDBProperty()
 
 class Series(ndb.Model):
-    """id is from external db"""
-    name = ndb.StringProperty(required=True)
-    last_modified = ndb.DateTimeProperty(auto_now=True)
-    air_date = ndb.StringProperty()
-    imdb_id = ndb.StringProperty()
-    image = ndb.StringProperty()
-    backdrop = ndb.StringProperty()
-    overview = ndb.TextProperty()
-    status = ndb.StringProperty()
+    """
+    Use integer id from TMDB.
+    """
+    json = ndb.JsonProperty(required=True)
+    seasons = ndb.PickleProperty()
 
     @classmethod
-    def from_json(cls, data):
-        if data.get('external_ids'):
-            imdb_id = data.get('external_ids').get('imdb_id')
-        else:
-            imdb_id = ""
+    def from_json(cls, json, seasons=list()):
+        # don't store season info here
+        json.pop('seasons', None)
+        return cls(id=json.get('id'), json=json, seasons=seasons)
 
-        series = cls(
-            id=str(data.get('id')),
-            name=data.get('name'),
-            air_date=data.get('first_air_date'),
-            imdb_id=imdb_id,
-            image=data.get('poster_path'),
-            backdrop=data.get('backdrop_path'),
-            overview=data.get('overview'),
-            status=data.get('status'))
-        return series
+    def get_id(self):
+        return self.key.integer_id()
 
-    def get_seasons(self):
-        """Returns list of seasons"""
-        return Season.query(ancestor=self.key).order(Season.number).fetch()
+    def name(self):
+        return self.json.get('name')
 
-class Season(ndb.Model):
-    """Has parent Series"""
-    number = ndb.IntegerProperty(required=True)
-    last_modified = ndb.DateTimeProperty(auto_now=True)
-    air_date = ndb.StringProperty()
-    image = ndb.StringProperty()
+    def number_of_seasons(self):
+        return self.json.get('number_of_seasons')
 
-    @classmethod
-    def from_json(cls, data, parent):
-        season = cls(
-            id=str(data.get('id')),
-            number=data.get('season_number'),
-            air_date=data.get('air_date'),
-            image=data.get('poster_path'),
-            parent=parent.key)
-        return season
+    def air_date(self):
+        return self.json.get('first_air_date')
 
-    def get_episodes(self):
-        """Retuns list of episodes"""
-        return Episode.query(ancestor=self.key).order(Episode.number).fetch()
+    def imdb_id(self):
+        external_ids = self.json.get('external_ids')
+        return external_ids and external_ids.get('imdb_id')
 
-class Episode(ndb.Model):
-    """Has parent Season"""
-    # tmdb_id = ndb.IntegerProperty(required=True)
-    number = ndb.IntegerProperty(required=True)
-    name = ndb.StringProperty(required=True)
-    last_modified = ndb.DateTimeProperty(auto_now=True)
-    air_date = ndb.StringProperty()
-    overview = ndb.TextProperty()
-    image = ndb.StringProperty()
+    def poster(self):
+        return self.json.get('poster_path')
+
+    def backdrop(self):
+        return self.json.get('backdrop_path')
+
+    def overview(self):
+        return self.json.get('overview')
+
+    def status(self):
+        return self.json.get('status')
+
+    def append_season(self, season):
+        self.seasons.append(season)
+
+
+class Season:
+    def __init__(self, json, episodes=list()):
+        self.json = json
+        self.episodes = episodes
 
     @classmethod
-    def from_json(cls, data, parent):
-        episode = cls(
-            id=str(data.get('id')),
-            number=data.get('episode_number'),
-            name=data.get('name'),
-            air_date=data.get('air_date'),
-            overview=data.get('overview'),
-            image=data.get('still_path'),
-            parent=parent.key)
-        return episode
+    def from_json(cls, json):
+        """
+        TMDB includes episodes in their response for a season,
+        so this method will also populate the episodes of a season.
+        """
+        episodes_json = json.pop('episodes', None)
+        if episodes_json is None:
+            return cls(json=json)
+
+        episodes = list()
+        for episode_json in episodes_json:
+            episodes.append(Episode.from_json(episode_json))
+        return cls(json=json, episodes=episodes)
+    
+    def get_id(self):
+        return self.json.get('id')
+
+    def name(self):
+        return self.json.get('name')
+
+    def number(self):
+        return self.json.get('season_number')
+
+    def number_of_episodes(self):
+        return len(self.json.get('episodes'))
+
+    def air_date(self):
+        return self.json.get('air_date')
+
+    def poster(self):
+        return self.json.get('poster_path')
+
+    def append_episode(self, episode):
+        self.episodes.append(episode)
+
+class Episode:
+    def __init__(self, json):
+        self.json = json
+
+    @classmethod
+    def from_json(cls, json):
+        return cls(json=json)
+
+    def get_id(self):
+        return self.json.get('id')
+
+    def number(self):
+        return self.json.get('episode_number')
+
+    def name(self):
+        return self.json.get('name')
+
+    def air_date(self):
+        return self.json.get('air_date')
+
+    def overview(self):
+        return self.json.get('overview')
+
+    def still(self):
+        return self.json.get('still_path')
+
+
+class SeriesRating:
+    def __init__(self, series_id, value, seasons=None):
+        self.id = series_id
+        self.value = 0
+        self.seasons = seasons
 
 class Rating(ndb.Model):
     """
-    A rating for a series or movie.
-    Rating includes the seasons, episodes of a series,
-    under the field children.
+    All ratings for a user.
+    Uses the same integer_id as User.
     """
     rating_type = ndb.IntegerProperty(required=True)
     value = ndb.IntegerProperty(required=True)
@@ -108,6 +153,10 @@ class Rating(ndb.Model):
 
     WATCHLIST = 20
     WATCHED = 21
+
+    @classmethod
+    def new(cls, user):
+        pass
 
     @classmethod
     def get_ratings_for_user(cls, user):
@@ -185,44 +234,44 @@ class UnhandledChanges(Exception):
 
 
 class database:
-    """consolidated of method that interact w/ database"""
+    """consolidated methods to interact w/ database"""
     @staticmethod
-    @ndb.transactional
     def load_series(series_id):
         """
         Loads series, season, episode into db.
         Returns series.
         """
         # TODO handle None errors.
+        series_id = int(series_id)
 
         #check if already in database
-        series = Series.get_by_id(str(series_id))
+        series = Series.get_by_id(int(series_id))
         if series:
             return series
 
+        # fetch from TMDB
         series_json = TMDB.series(series_id)
         series = Series.from_json(series_json)
-        series.put()
-        for i in range(1, series_json.get('number_of_seasons') + 1):
-            season_json = TMDB.season(series_id, season_number=i)
-            season = Season.from_json(season_json, parent=series)
-            season.put()
 
-            for episode_json in season_json.get('episodes'):
-                episode = Episode.from_json(episode_json, parent=season)
-                episode.put()
+        for i in range(1, series.number_of_seasons() + 1):
+            season_json = TMDB.season(series_id, season_number=i)
+            season = Season.from_json(season_json)
+            series.append_season(season)
+
+        # store series
+        series.put()
 
         return series
     
     @staticmethod
     def watchlist_series(series, user):
         # check if already on watchlist
-        if Rating.get_by_id(series.key.string_id(), parent=user.key):
+        if Rating.get_by_id(series.key.integer_id(), parent=user.key):
             return
 
         series_rating = Rating(
             parent=user.key,
-            id=series.key.string_id(),
+            id=series.key.integer_id(),
             rating_type=Rating.SERIES_TYPE,
             value=Rating.WATCHLIST,
             children=dict()).put()

@@ -32,16 +32,16 @@
     <form method="post">
     <tr>
         <td>
-            {% if series.image %}
-            <img src="{{poster_base + series.image}}">
+            {% if series.poster() %}
+            <img src="{{poster_base + series.poster()}}">
             {% endif %}
         </td>
         <td>
-            {{series.name}}
+            {{series.name()}}
         </td>
         {% if user %}
         <td>
-            <input type="hidden" name="series_id" value="{{series.key.string_id()}}">
+            <input type="hidden" name="series_id" value="{{series.get_id()}}">
             <input type="submit" "value"="Add to watchlist">
         </td>
         {% endif%}

@@ -6,8 +6,15 @@
 # for series in series_rated
     <tr>
         <td>
-            <div id="{{series.get_id()}}">{{series.name()}}</div>
+            <div id="{{series.get_id()}}">{{series.name}}</div>
         <td>
+        <td></td>
+        <td>
+            <a href="https://www.themoviedb.org/tv/{{series.get_id()}}">TMDb</a>
+            <a href="http://www.imdb.com/title/{{series.imdb_id}}">IMDb</a>
+        </td>
+        <td>{{series.air_date}}</td>
+        <td>TMDB ID: {{series.get_id()}}</td>
     </tr>
     # for season in series.seasons
     # set season_rating = ur.get_season(season.get_id())
@@ -45,6 +52,7 @@
         # endfor
     # endif
     # endfor
+    <tr><td><br><br></td></tr>
 # endfor
 </table>
 <a href='/'>Home</a>

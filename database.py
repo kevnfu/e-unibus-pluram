@@ -5,7 +5,9 @@ from google.appengine.ext import ndb
 from oauth2client.appengine import CredentialsNDBProperty
 
 from tmdb import TMDB
-from datetime import datetime, timedelta
+from datetime import datetime as dt
+from datetime import timedelta
+import datetime
 
 class AppStat(ndb.Model):
     """Table for getting data about server"""
@@ -31,28 +33,34 @@ class Series(ndb.Model):
     """
     json = ndb.JsonProperty(required=True)
     seasons = ndb.PickleProperty()
+    name = ndb.StringProperty()
+    air_date = ndb.DateProperty()
+    imdb_id = ndb.StringProperty()
+    status = ndb.StringProperty()
 
     @classmethod
     def from_json(cls, json):
         # don't store season info here
         json.pop('seasons', None)
-        return cls(id=json.get('id'), json=json, seasons=list())
+
+        air_date_str = json.get('first_air_date')
+        air_date = (air_date_str and dt.strptime(air_date_str, "%Y-%m-%d"))
+        external_ids = json.get('external_ids')
+        imdb_id = (external_ids and external_ids.get('imdb_id'))
+        
+        return cls(id=json.get('id'), 
+            json=json, 
+            seasons=list(),
+            name=json.get('name'),
+            air_date=air_date,
+            imdb_id=imdb_id,
+            status=json.get('status'))
 
     def get_id(self):
         return self.key.integer_id() # == self.json.get('id')
 
-    def name(self):
-        return self.json.get('name')
-
     def number_of_seasons(self):
         return self.json.get('number_of_seasons')
-
-    def air_date(self):
-        return self.json.get('first_air_date')
-
-    def imdb_id(self):
-        external_ids = self.json.get('external_ids')
-        return external_ids and external_ids.get('imdb_id')
 
     def poster(self):
         return self.json.get('poster_path')
@@ -62,9 +70,6 @@ class Series(ndb.Model):
 
     def overview(self):
         return self.json.get('overview')
-
-    def status(self):
-        return self.json.get('status')
 
     def append_season(self, season):
         self.seasons.append(season)
@@ -252,7 +257,7 @@ class TmdbConfig(ndb.Model):
         if not config:
             return cls.refetch()
 
-        if ((config.last_modified - datetime.now()) > 
+        if ((config.last_modified - dt.now()) > 
             timedelta(cls.REFRESH_LATENCY)):
             return cls.refetch()
 

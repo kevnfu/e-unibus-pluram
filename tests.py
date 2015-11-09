@@ -1,19 +1,21 @@
 from main import *
 
-
 class TestHandler(BaseHandler):
     def get(self):
         series_ids = [1408, 56570]
 
-        changes_ids = TMDB.tv_changes_ids()
+        data = TMDB.search_tv('Outlander')
         series_list = list()
-        for changes_id in changes_ids[0:]:
-            series = Series.from_json(TMDB.series(changes_id))
-            series_list.append(series)
 
-        series_names = map(lambda x: x.name(), series_list)
+        for series_json in data:
+            self.render_json(series_json)
 
-        self.render_json(series_names)
+            series_list.append(Series.from_json(series_json))
+
+        # self.render('front.html',
+        #     poster_base=TmdbConfig.poster_path(2),
+        #     user=self.user, 
+        #     series_list=series_list)
 
     def sync(self):
         database.sync_with_tmdb()
@@ -66,7 +68,6 @@ app = webapp2.WSGIApplication([
     ('/test/?', TestHandler),
     webapp2.Route('/test/images', handler=TestHandler, handler_method="images"),
     webapp2.Route('/test/populate', handler=TestHandler, handler_method="populate"),
-    webapp2.Route('/special/delete', handler=TestHandler,handler_method="delete"),
-    webapp2.Route('/test/sync', handler=TestHandler, handler_method="sync"),
-    (decorator.callback_path, decorator.callback_handler())
+    webapp2.Route('/test/delete', handler=TestHandler,handler_method="delete"),
+    webapp2.Route('/test/sync', handler=TestHandler, handler_method="sync")
 ], debug=True)

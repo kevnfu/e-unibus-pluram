@@ -12,7 +12,7 @@ handlers:
   script: tasks.app
   login: admin
 
-- url: /(test|special).*
+- url: /test.*
   script: tests.app
 
 - url: .*

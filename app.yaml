@@ -8,7 +8,7 @@ handlers:
 - url: /static
   static_dir: static
 
-- url: /tasks
+- url: /tasks.*
   script: tasks.app
   login: admin
 

@@ -313,7 +313,6 @@ class TestHandler(BaseHandler):
     def populate(self):
         pass
 
-
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/login/?', LoginHandler),

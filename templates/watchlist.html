@@ -3,45 +3,49 @@
 {% block content %}
 <a href='/'>Home</a>
 <table>
-{% for series, rating in series_rating_list %}
+# for series in series_rated
     <tr>
         <td>
-            <div id="{{rating.key.string_id()}}">{{series.name}}</div>
+            <div id="{{series.get_id()}}">{{series.name()}}</div>
         <td>
     </tr>
-    {% for season in series.get_seasons() 
-    if not rating.watched(season.key.string_id()) %}
+    # for season in series.seasons
+    # set season_rating = ur.get_season(season.get_id())
+    # if not (season_rating and season_rating.watched())
     <tr>
         <td></td>
         <td><form method="post">
-            <input type="hidden" name="rating_id"
-                value="{{rating.key.string_id()}}">
-            <input type="hidden" name="watched_id" 
-                value="{{season.key.string_id()}}">
+            <input type="hidden" name="id_type" value="season">
+            <input type="hidden" name="watched_id" value="{{season.get_id()}}">
+            <input type="hidden" name="series_div" value="{{series.get_id()}}">
             <input type="submit" class="submit_link"
-                value="Season {{season.number}}">
+                value="{{season.name()}}">
         </form></td>
         <td></td><td></td>
-        <td>{{season.air_date}}</td>
+        <td>{{season.air_date()}}</td>
     </tr>
-        {% for episode in season.get_episodes() 
-        if not rating.watched(episode.key.string_id()) %}
+        # for episode in season.episodes
+        # set episode_rating = ur.get_episode(episode.get_id())
+        # if not (episode_rating and episode_rating.watched())
         <tr>
             <td></td><td></td>
-            <td>{{episode.number}}.</td>
+            <td>{{episode.number()}}.</td>
             <td><form method="post">
-                <input type="hidden" name="rating_id"
-                    value="{{rating.key.string_id()}}">
+                <input type="hidden" name="id_type" value="episode">
                 <input type="hidden" name="watched_id" 
-                    value="{{episode.key.string_id()}}">
+                    value="{{episode.get_id()}}">
+                <input type="hidden" name="series_div" 
+                    value="{{series.get_id()}}">
                 <input type="submit" class="submit_link" 
-                    value="{{episode.name}}">
+                    value="{{episode.name()}}">
             </form></td>
-            <td>{{episode.air_date}}</td>
+            <td>{{episode.air_date()}}</td>
         </tr>
-        {% endfor%}
-    {% endfor %}
-{% endfor %}
+        # endif
+        # endfor
+    # endif
+    # endfor
+# endfor
 </table>
 <a href='/'>Home</a>
 {% endblock %}

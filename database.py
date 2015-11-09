@@ -332,13 +332,10 @@ class database:
         """
         Reloads shows to db that were changed in the last 24 hours
         """
-        # Create set of all series id in database
-        series_keys = Series.query().fetch(keys_only=True)
-        series_ids = set(map(lambda x: x.string_id(), series_keys))
-
         # Get changed ids from tmdb
         changes_ids = TMDB.tv_changes_ids()
 
+        # track # of changes
         updated_count = AppStat.get_by_id("daily_sync_count")
         if not updated_count:
             updated_count = AppStat(id="daily_sync_count", 
@@ -348,7 +345,9 @@ class database:
 
         # if a show in db changed, reload
         for changes_id in changes_ids:
-            if changes_id in series_ids:
+            series = Series.get_by_id(changes_id)
+            if series:
+                # TODO: rewrite to use update_series
                 cls.load_series(changes_id)
                 logging.info("Reloaded series: %s" % changes_id)
                 updated_count.value += 1

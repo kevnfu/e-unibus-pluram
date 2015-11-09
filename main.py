@@ -225,104 +225,11 @@ class WatchlistHandler(BaseHandler):
 
         self.redirect('/account/watchlist#' + series_div)
 
-
-class TestHandler(BaseHandler):
-    def get(self):
-        series_ids = [1408, 56570]
-
-        # for series_id in series_ids:
-        #     series = Series.get_by_id(series_id)
-        #     if series is not None:
-        #         self.write("Tried to re-add series %d" % series_id)
-        #         return
-
-        #     # fetch from TMDB
-        #     series_json = TMDB.series(series_id)
-        #     series = Series.from_json(series_json)
-
-        #     for i in range(1, series.number_of_seasons() + 1):
-        #         season_json = TMDB.season(series_id, season_number=i)
-        #         season = Season.from_json(season_json)
-        #         series.append_season(season)    
-        #     series.put()
-
-        for series_id in series_ids:
-            series = series = Series.get_by_id(series_id)
-            for season in series.seasons:
-                self.render_json(season.json)
-            self.write('\n----------------------------------------\n')
-
-        return
-
-        # user_rating = UserRating.for_user(self.user)
-        # series_ids = list(user_rating.get_all_series_id())
-        # # [1408, 56570]
-        # self.render_json(series_ids)
-        # series_id = series_ids[1]
-        # series = Series.get_by_id(series_id)
-        # self.write('Series %s \n\n' % series.name())
-        # self.render_json(series.json)
-        # self.write('\n\nSeason %d \n\n' % series.seasons[2].number())
-        # self.render_json(series.seasons[2].json)
-        # self.write('\n\n')
-
-    def sync(self):
-        database.sync_with_tmdb()
-
-    def delete(self):
-        database.delete_all_entries()
-
-    def images(self):
-        q = self.request.get('q')
-        if not q:
-            self.render('images-example.html')
-            return
-
-        url_list = list()
-        series = Series.query().filter(Series.name==q).get()
-        if not series:
-            self.render('images-example.html', error_msg="Not found.")
-            return
-
-        for i in range(7):
-            desc = "Series poster. Size %d" % i
-            url = TmdbConfig.poster_path(i) + series.image
-            url_list.append((desc, url))
-
-        for i in range(4):
-            desc = "Series backdrop. Size %d" % i
-            url = TmdbConfig.backdrop_path(i) + series.backdrop
-            url_list.append((desc, url))
-
-        season = Season.query(ancestor=series.key).get()
-        if season.image:
-            for i in range(7):
-                desc = "Season %d poster. size %d" % (season.number, i)
-                url = TmdbConfig.poster_path(i) + season.image
-                url_list.append((desc, url))
-
-        episode = Episode.query(ancestor=series.key).get()
-        if episode.image:
-            for i in range(4):
-                desc = "Episode %s poster. size %d" % (episode.name, i)
-                url = TmdbConfig.poster_path(i) + episode.image
-                url_list.append((desc, url))
-
-        self.render('images-example.html', url_list=url_list)
-
-    def populate(self):
-        pass
-
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/login/?', LoginHandler),
     ('/logout/?', LogoutHandler),
-    ('/test/?', TestHandler),
-    webapp2.Route('/test/images', handler=TestHandler, handler_method="images"),
-    webapp2.Route('/test/populate', handler=TestHandler, handler_method="populate"),
     ('/account/?', AccountHandler),
     ('/account/watchlist/?', WatchlistHandler),
-    webapp2.Route('/special/delete', handler=TestHandler,handler_method="delete"),
-    webapp2.Route('/special/sync', handler=TestHandler, handler_method="sync"),
     (decorator.callback_path, decorator.callback_handler())
 ], debug=True)

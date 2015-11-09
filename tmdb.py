@@ -2,6 +2,7 @@ import os
 import json
 import cgi
 import logging
+import time
 from datetime import datetime, timedelta
 
 from urllib import urlencode
@@ -24,10 +25,23 @@ def cgi_space_escape(text):
 class TMDB:
     @classmethod
     def fetch_json(cls, url):
+        """
+        Contacts the TMDb server. 
+        Handles rate-limiting conditions
+        """
         r = urlfetch.fetch(url=url, headers={'Accept':'application/json'})
         logging.info("urlfetch: %s" % url)
+
+        # too many requests from this ip. cool off.
+        if r.status_code == 429:
+            retry_after = int(r.headers.get('retry-after'))
+            time.sleep(retry_after + 1)
+            r = urlfetch.fetch(url=url, headers={'Accept':'application/json'})
+
         if r.status_code != 200:
-            logging.error("urlfetch error in TMDB: %s" % url + "\n" + r.content)
+            logging.error(
+                "urlfetch error 200 in TMDd: %s \nHeaders: %s, \nContent: %s" % 
+                (url, str(r.headers), r.content))
             return None
         data = json.loads(r.content)
         return data

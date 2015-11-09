@@ -85,9 +85,13 @@ class TMDB:
         return cls.fetch_json(url)
 
     @classmethod
-    def tv_changes(cls, page):
+    def tv_changes(cls, page, start_date=None):
         url = (BASE_URL + '/tv/changes?api_key={key}&page={page}')
-        url = url.format(key=API_KEY, page=str(page))
+        if start_date is None:
+            url = url.format(key=API_KEY, page=str(page))
+        else:
+            url = url + '&start_date={start_date}'
+            url = url.format(key=API_KEY, page=str(page), start_date=start_date)
         return cls.fetch_json(url)
 
     @classmethod
@@ -97,11 +101,11 @@ class TMDB:
         in the last 24hrs
         """
         # TODO implement start_date
-        data = cls.tv_changes(1)
+        data = cls.tv_changes(page=1, start_date=start_date)
         results = data.get('results')
         total_pages = data.get('total_pages')
         for page in range(2, total_pages+1):
-            results.extend(cls.tv_changes(page).get('results'))
+            results.extend(cls.tv_changes(page, start_date).get('results'))
 
         ids = list()
         for item in results:
@@ -111,15 +115,14 @@ class TMDB:
     @classmethod
     def series_changes(cls, series_id, start_date=None):
         """
-        Returns a list of changes with keys "action" and "item"
+        Returns a list of changes with keys "key" and "item"
         By default, gives last 24 hours
         """
+        url = (BASE_URL + "/tv/{id}/changes?api_key={key}")
         if start_date is None:
-            url = (BASE_URL + "/tv/{id}/changes?api_key={key}")
             url = url.format(id=series_id, key=API_KEY)
         else:
-            url = (BASE_URL + 
-                "/tv/{id}/changes?api_key={key}&start_date={start_date}")
+            url = url + "&start_date={start_date}"
             url = url.format(id=series_id, start_date=start_date, key=API_KEY)
 
         return cls.fetch_json(url).get('changes')
@@ -147,24 +150,22 @@ class TMDB:
 
     @classmethod
     def season_changes(cls, season_id, start_date=None):
+        url = (BASE_URL + "/tv/season/{id}/changes?api_key={key}")
         if start_date is None:
-            url = (BASE_URL + "/tv/season/{id}/changes?api_key={key}")
             url = url.format(id=season_id, key=API_KEY)
         else:
-            url = (BASE_URL + 
-                "/tv/season/{id}/changes?api_key={key}&start_date={start_date}")
+            url = url + "&start_date={start_date}"
             url = url.format(id=season_id, start_date=start_date, key=API_KEY)
 
         return cls.fetch_json(url).get('changes')
 
     @classmethod
     def episode_changes(cls, episode_id, start_date=None):
+        url = (BASE_URL + "/tv/episode/{id}/changes?api_key={key}")
         if start_date is None:
-            url = (BASE_URL + "/tv/episode/{id}/changes?api_key={key}")
             url = url.format(id=episode_id, key=API_KEY)
         else:
-            url = (BASE_URL + 
-                "/tv/episode/{id}/changes?api_key={key}&start_date={start_date}")
+            url = url + "&start_date={start_date}"
             url = url.format(id=episode_id, start_date=start_date, key=API_KEY)
 
         return cls.fetch_json(url).get('changes')

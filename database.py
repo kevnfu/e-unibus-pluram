@@ -352,14 +352,18 @@ class database:
         updated_count.value = 0
 
         # if a show in db changed, update
+        new_series_list = list()
         for changed_id in changed_ids:
             series = Series.get_by_id(changed_id)
             if series:
-                cls.update_series(changed_id)
-                logging.info("Reloaded series: %s" % changed_id)
-                updated_count.value += 1
+                new_series = cls.update_series(changed_id)
+                new_series_list.append(new_series)
+                logging.info("Updated series: %s" % changed_id)
 
+        updated_count.value = len(new_series_list)
         updated_count.put()
+
+        ndb.put_multi(new_series_list)
         return
 
     @classmethod
@@ -385,8 +389,7 @@ class database:
         # store seasons
         new_series.seasons = seasons
         
-        # store series
-        new_series.put()
+        return new_series
 
     @staticmethod
     def delete_all_entries():

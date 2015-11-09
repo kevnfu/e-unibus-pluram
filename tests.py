@@ -21,9 +21,6 @@ class TestHandler(BaseHandler):
     def sync(self):
         database.sync_with_tmdb()
 
-    def delete(self):
-        database.delete_all_entries()
-
     def images(self):
         q = self.request.get('q')
         if not q:
@@ -69,7 +66,6 @@ app = webapp2.WSGIApplication([
     ('/test/?', TestHandler),
     webapp2.Route('/test/images', handler=TestHandler, handler_method="images"),
     webapp2.Route('/test/populate', handler=TestHandler, handler_method="populate"),
-    webapp2.Route('/test/delete', handler=TestHandler,handler_method="delete"),
     webapp2.Route('/test/changes', handler=TestHandler,handler_method="changes"),
     webapp2.Route('/test/sync', handler=TestHandler, handler_method="sync")
 ], debug=True)

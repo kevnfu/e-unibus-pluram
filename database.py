@@ -77,6 +77,9 @@ class Series(ndb.Model):
     def get_season(self, season_number):
         return self.seasons[season_number]
 
+    def set_season(self, season_numberm, season):
+        self.seasons[season_number] = season
+
     def get_episode(self, season_number, episode_number):
         return self.seasons[season_number].episodes[episode_number]
 
@@ -315,6 +318,7 @@ class database:
         # store
         series.put()
         return True
+
     
     @staticmethod
     def watchlist_series(series_id, user):
@@ -338,7 +342,7 @@ class database:
         Reloads shows to db that were changed in the last 24 hours
         """
         # Get changed ids from tmdb
-        changes_ids = TMDB.tv_changes_ids()
+        changed_ids = TMDB.tv_changed_ids()
 
         # track # of changes
         updated_count = AppStat.get_by_id("daily_sync_count")
@@ -347,63 +351,42 @@ class database:
                 description="Number of seasons updated last night")
         updated_count.value = 0
 
-
-        # if a show in db changed, reload
-        for changes_id in changes_ids:
-            series = Series.get_by_id(changes_id)
+        # if a show in db changed, update
+        for changed_id in changed_ids:
+            series = Series.get_by_id(changed_id)
             if series:
-                # TODO: rewrite to use update_series
-                cls.load_series(changes_id)
-                logging.info("Reloaded series: %s" % changes_id)
+                cls.update_series(changed_id)
+                logging.info("Reloaded series: %s" % changed_id)
                 updated_count.value += 1
 
         updated_count.put()
         return
 
-    @staticmethod
-    @ndb.transactional(propagation=ndb.TransactionOptions.ALLOWED)
-    def update_season(season_id, season_number, series):
-        """only called by update_series"""
-        # Refetch season
-        season = Season.from_json(
-            TMDB.season(series.key.string_id(), season_number), parent=series)
-        season.put()
-
-        # Find and update changed episodes
-        changes = TMDB.season_changes(season_id).get('changes')
-        for change in changes:
-            if change.get('key') == 'episode':
-                for action in change.get('items'):
-                    # episode_id = str(action.get('value').get('episode_id'))
-                    episode_num = str(action.get('value').get('episode_number'))
-                    data = TMDB.episode(
-                            tvid=series.key.string_id(),
-                            season_number=season_number,
-                            episode_number=episode_num)
-                    episode = Episode.from_json(data, parent=season)
-                    episode.put()
-
     @classmethod
-    @ndb.transactional
     def update_series(cls, series_id):
         """
-        Updates series and its seasons/episodes
-        with TMDB.series_changes()
+        Refetches series, and refetches its seasons IF it has changed
         """
-        # Refetch series
-        series = Series.from_json(TMDB.series(series_id))
-        series.put()
+        seasons_changed = TMDB.seasons_changed_in_series(series_id)
+        for season_number in seasons_changed:
+            # refetch seasons that have changed
+            new_season = Season.from_json(
+                TMDB.season(series_id, season_number))
 
-        # Find and update changed seasons
-        changed_season_nums = list()
-        changes = TMDB.series_changes(series.key.string_id()).get('changes')
-        for change in changes:
-            if change.get('key') == 'season':
-                for action in change.get('items'):
-                    season_id = str(action.get('value').get('season_id'))
-                    season_number = str(action.get('value').get('season_number'))
-                    cls.update_season(season_id, season_number, series)
+            # store the season
+            series.set_season(season_number, new_season)
 
+        # hold on to the seasons
+        seasons = series.seasons
+
+        # refetch series
+        new_series = Series.from_json(series_id)
+        
+        # store seasons
+        new_series.seasons = seasons
+        
+        # store series
+        new_series.put()
 
     @staticmethod
     def delete_all_entries():

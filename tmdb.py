@@ -91,7 +91,7 @@ class TMDB:
         return cls.fetch_json(url)
 
     @classmethod
-    def tv_changes_ids(cls, start_date=None):
+    def tv_changed_ids(cls, start_date=None):
         """
         Gives a list containing the ids of series that have changed
         in the last 24hrs
@@ -110,7 +110,10 @@ class TMDB:
 
     @classmethod
     def series_changes(cls, series_id, start_date=None):
-        """By default, gives last 24 hours"""
+        """
+        Returns a list of changes with keys "action" and "item"
+        By default, gives last 24 hours
+        """
         if start_date is None:
             url = (BASE_URL + "/tv/{id}/changes?api_key={key}")
             url = url.format(id=series_id, key=API_KEY)
@@ -119,7 +122,28 @@ class TMDB:
                 "/tv/{id}/changes?api_key={key}&start_date={start_date}")
             url = url.format(id=series_id, start_date=start_date, key=API_KEY)
 
-        return cls.fetch_json(url)
+        return cls.fetch_json(url).get('changes')
+
+    @classmethod
+    def seasons_changed_in_series(cls, series_id, start_date=None):
+        """
+        Given a series id, returns a list of season numbers
+        that have been changed since start_date (last 24h by default)
+        """
+        # get the changes for series
+        series_changes = TMDB.series_changes(series_id,start_date=start_date)
+
+        # get the series # for series that have changed
+        changed_season_list = list()
+        for changes in series_changes:
+            if changes.get('key') == 'season':
+                season_number = (
+                    changes.get('items')
+                    .get('value')
+                    .get('season_number'))
+                changed_season_list.append(season_number)
+
+        return changed_season_list
 
     @classmethod
     def season_changes(cls, season_id, start_date=None):
@@ -131,7 +155,7 @@ class TMDB:
                 "/tv/season/{id}/changes?api_key={key}&start_date={start_date}")
             url = url.format(id=season_id, start_date=start_date, key=API_KEY)
 
-        return cls.fetch_json(url)
+        return cls.fetch_json(url).get('changes')
 
     @classmethod
     def episode_changes(cls, episode_id, start_date=None):
@@ -143,4 +167,4 @@ class TMDB:
                 "/tv/episode/{id}/changes?api_key={key}&start_date={start_date}")
             url = url.format(id=episode_id, start_date=start_date, key=API_KEY)
 
-        return cls.fetch_json(url)
+        return cls.fetch_json(url).get('changes')

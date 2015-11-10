@@ -50,7 +50,7 @@ class Series(ndb.Model):
         
         return cls(id=json.get('id'), 
             json=json, 
-            seasons=list(),
+            seasons=dict(),
             name=json.get('name'),
             air_date=air_date,
             imdb_id=imdb_id,
@@ -71,21 +71,25 @@ class Series(ndb.Model):
     def overview(self):
         return self.json.get('overview')
 
-    def append_season(self, season):
-        self.seasons.append(season)
-
     def get_season(self, season_number):
-        return self.seasons[season_number]
+        return self.seasons.get(season_number)
 
-    def set_season(self, season_numberm, season):
-        self.seasons[season_number] = season
+    def set_season(self, season):
+        self.seasons[season.number()] = season
+
+    def iter_seasons(self):
+        for i in range(1, self.number_of_seasons() + 1):
+            yield self.get_season(i)
 
     def get_episode(self, season_number, episode_number):
-        return self.seasons[season_number].episodes[episode_number]
+        return self.get_season(season_number).get_episode(episode_number)
+
+    def set_episode(self, season_number, episode):
+        self.get_season(season_number).set_episode(episode)
 
 
 class Season(object):
-    def __init__(self, json, episodes=list()):
+    def __init__(self, json, episodes=dict()):
         self.json = json
         self.episodes = episodes
 
@@ -96,13 +100,13 @@ class Season(object):
         so this method will also populate the episodes of a season.
         """
         episodes_json = json.pop('episodes', None)
+        season = cls(json=json)
         if episodes_json is None:
-            return cls(json=json)
+            return season
 
-        episodes = list()
         for episode_json in episodes_json:
-            episodes.append(Episode.from_json(episode_json))
-        return cls(json=json, episodes=episodes)
+            season.set_episode(Episode.from_json(episode_json))
+        return season
     
     def get_id(self):
         return self.json.get('id')
@@ -114,6 +118,9 @@ class Season(object):
         return self.json.get('season_number')
 
     def number_of_episodes(self):
+        """
+        Need to add episodes before this is called
+        """
         return len(self.episodes)
 
     def air_date(self):
@@ -122,11 +129,15 @@ class Season(object):
     def poster(self):
         return self.json.get('poster_path')
 
-    def append_episode(self, episode):
-        self.episodes.append(episode)
-
     def get_episode(self, episode_number):
-        return self.episodes[episode_number]
+        return self.episodes.get(episode_number)
+
+    def set_episode(self, episode):
+        self.episodes[episode.number()] = episode
+
+    def iter_episodes(self):
+        for i in range(1, self.number_of_episodes() + 1):
+            yield self.get_episode(i)
 
 class Episode(object):
     def __init__(self, json):
@@ -313,7 +324,7 @@ class database:
         for i in range(1, series.number_of_seasons() + 1):
             season_json = TMDB.season(series_id, season_number=i)
             season = Season.from_json(season_json)
-            series.append_season(season)
+            series.set_season(season)
 
         # store
         series.put()
@@ -356,7 +367,7 @@ class database:
         for changed_id in changed_ids:
             series = Series.get_by_id(changed_id)
             if series:
-                new_series = cls.update_series(changed_id)
+                new_series = cls.update_series(series)
                 new_series_list.append(new_series)
                 logging.info("Updated series: %s" % changed_id)
 
@@ -367,10 +378,11 @@ class database:
         return
 
     @classmethod
-    def update_series(cls, series_id):
+    def update_series(cls, series):
         """
-        Refetches series, and refetches its seasons IF it has changed
+        Refetches series, and refetches its seasons IF it has changes
         """
+        series_id = series.get_id()
         seasons_changed = TMDB.seasons_changed_in_series(series_id)
         for season_number in seasons_changed:
             # refetch seasons that have changed
@@ -378,16 +390,13 @@ class database:
                 TMDB.season(series_id, season_number))
 
             # store the season
-            series.set_season(season_number, new_season)
-
-        # hold on to the seasons
-        seasons = series.seasons
+            series.set_season(new_season)
 
         # refetch series
-        new_series = Series.from_json(series_id)
+        new_series = Series.from_json(TMDB.series(series_id))
         
         # store seasons
-        new_series.seasons = seasons
+        new_series.seasons = series.seasons
         
         return new_series
 

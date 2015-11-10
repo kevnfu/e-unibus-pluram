@@ -16,7 +16,7 @@
         <td>{{series.air_date}}</td>
         <td>TMDB ID: {{series.get_id()}}</td>
     </tr>
-    # for season in series.seasons
+    # for season in series.iter_seasons()
     # set season_rating = ur.get_season(season.get_id())
     # if not (season_rating and season_rating.watched())
     <tr>
@@ -31,7 +31,8 @@
         <td></td><td></td>
         <td>{{season.air_date()}}</td>
     </tr>
-        # for episode in season.episodes
+    
+        # for episode in season.iter_episodes()
         # set episode_rating = ur.get_episode(episode.get_id())
         # if not (episode_rating and episode_rating.watched())
         <tr>
@@ -50,6 +51,7 @@
         </tr>
         # endif
         # endfor
+ 
     # endif
     # endfor
     <tr><td><br><br></td></tr>

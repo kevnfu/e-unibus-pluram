@@ -107,9 +107,7 @@ class TMDB:
         for page in range(2, total_pages+1):
             results.extend(cls.tv_changes(page, start_date).get('results'))
 
-        ids = list()
-        for item in results:
-            ids.append(str(item.get('id')))
+        ids = [item.get('id') for item in results]
         return ids
 
     @classmethod
@@ -140,11 +138,9 @@ class TMDB:
         changed_season_list = list()
         for changes in series_changes:
             if changes.get('key') == 'season':
-                season_number = (
-                    changes.get('items')
-                    .get('value')
-                    .get('season_number'))
-                changed_season_list.append(season_number)
+                for item in changes.get('items'):
+                    season_number = (item.get('value').get('season_number'))
+                    changed_season_list.append(season_number)
 
         return changed_season_list
 

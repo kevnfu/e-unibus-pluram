@@ -4,19 +4,29 @@ class TestHandler(BaseHandler):
     def get(self):
         series_ids = [1408, 56570]
         nathan = 58957
-        # Get changed ids from tmdb
-        json = TMDB.series_changes(nathan)
-        self.render_json(json)
-        
+        series = Series.get_by_id(nathan)
+        self.render_json(series.seasons)
+        season1 = Season.from_json(TMDB.season(nathan, 1))
+        self.render_json(season1.get_episode(1).json)
+
+    def spacer(self):
+        self.write('\n\n')
 
     def changes(self):
-        changed_ids = TMDB.tv_changed_ids()
+        nathan = 58957
+        self.write('Total changes:\n')
+        self.render_json(len(TMDB.tv_changed_ids()))
+        self.spacer()
 
-        # if a show in db changed, reload
-        for changed_id in changed_ids[10]:    
-            json = TMDB.series_changes(changed_id)
-            self.render_json(json)
-            self.write('\n\n\n')
+        self.write('Seasons changed in nathan:\n')
+        self.render_json(TMDB.seasons_changed_in_series(nathan))
+        self.spacer()
+        self.write('Episodes in season 3\n')
+        season3 = Season.from_json(TMDB.season(nathan, 3))
+        self.render_json([episode.json for episode in season3.iter_episodes()])
+        self.spacer()
+        self.write('Changes in season 3\n')
+        self.render_json(TMDB.season_changes(season3.get_id()))
 
     def sync(self):
         database.sync_with_tmdb()

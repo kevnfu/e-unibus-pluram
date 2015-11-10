@@ -107,7 +107,7 @@ class TMDB:
         for page in range(2, total_pages+1):
             results.extend(cls.tv_changes(page, start_date).get('results'))
 
-        ids = [item.get('id') for item in results]
+        ids = [int(item.get('id')) for item in results]
         return ids
 
     @classmethod

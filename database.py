@@ -78,7 +78,7 @@ class Series(ndb.Model):
         self.seasons[season.number()] = season
 
     def iter_seasons(self):
-        for i in range(1, self.number_of_seasons() + 1):
+        for i in sorted(self.seasons.keys()):
             yield self.get_season(i)
 
     def get_episode(self, season_number, episode_number):
@@ -100,13 +100,15 @@ class Season(object):
         so this method will also populate the episodes of a season.
         """
         episodes_json = json.pop('episodes', None)
-        season = cls(json=json)
         if episodes_json is None:
-            return season
+            return cls(json=json)
 
+        episodes = dict()
         for episode_json in episodes_json:
-            season.set_episode(Episode.from_json(episode_json))
-        return season
+            episode = Episode.from_json(episode_json)
+            episodes[episode.number()] = episode
+
+        return cls(json=json, episodes=episodes)
     
     def get_id(self):
         return self.json.get('id')
@@ -136,7 +138,7 @@ class Season(object):
         self.episodes[episode.number()] = episode
 
     def iter_episodes(self):
-        for i in range(1, self.number_of_episodes() + 1):
+        for i in sorted(self.episodes.keys()):
             yield self.get_episode(i)
 
 class Episode(object):

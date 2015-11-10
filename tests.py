@@ -1,18 +1,19 @@
 from main import *
 
 class TestHandler(BaseHandler):
-    def get(self):
+    def get(self, *a):
         series_ids = [1408, 56570]
         nathan = 58957
-        series = Series.get_by_id(nathan)
-        self.render_json(series.seasons)
-        season1 = Season.from_json(TMDB.season(nathan, 1))
-        self.render_json(season1.get_episode(1).json)
+        changed_ids = TMDB.tv_changed_ids()
+        self.write(len(changed_ids))
+        self.spacer()
+        self.write(len(set(changed_ids)))
+
 
     def spacer(self):
         self.write('\n\n')
 
-    def changes(self):
+    def changes(self, *a):
         nathan = 58957
         self.write('Total changes:\n')
         self.render_json(len(TMDB.tv_changed_ids()))
@@ -28,10 +29,10 @@ class TestHandler(BaseHandler):
         self.write('Changes in season 3\n')
         self.render_json(TMDB.season_changes(season3.get_id()))
 
-    def sync(self):
+    def sync(self, *a):
         database.sync_with_tmdb()
 
-    def images(self):
+    def images(self, *a):
         q = self.request.get('q')
         if not q:
             self.render('images-example.html')
@@ -45,37 +46,37 @@ class TestHandler(BaseHandler):
 
         for i in range(7):
             desc = "Series poster. Size %d" % i
-            url = TmdbConfig.poster_path(i) + series.image
+            url = TmdbConfig.poster_path(i) + series.poster()
             url_list.append((desc, url))
 
         for i in range(4):
             desc = "Series backdrop. Size %d" % i
-            url = TmdbConfig.backdrop_path(i) + series.backdrop
+            url = TmdbConfig.backdrop_path(i) + series.backdrop()
             url_list.append((desc, url))
 
-        season = Season.query(ancestor=series.key).get()
-        if season.image:
+        season = series.get_season(1)
+        if season.poster():
             for i in range(7):
-                desc = "Season %d poster. size %d" % (season.number, i)
-                url = TmdbConfig.poster_path(i) + season.image
+                desc = "Season %d poster. size %d" % (season.number(), i)
+                url = TmdbConfig.poster_path(i) + season.poster()
                 url_list.append((desc, url))
 
-        episode = Episode.query(ancestor=series.key).get()
-        if episode.image:
+        episode = season.get_episode(1)
+        if episode.still():
             for i in range(4):
-                desc = "Episode %s poster. size %d" % (episode.name, i)
-                url = TmdbConfig.poster_path(i) + episode.image
+                desc = "Episode %s poster. size %d" % (episode.name(), i)
+                url = TmdbConfig.poster_path(i) + episode.still()
                 url_list.append((desc, url))
 
         self.render('images-example.html', url_list=url_list)
 
-    def populate(self):
+    def populate(self, *a):
         pass
 
 app = webapp2.WSGIApplication([
     ('/test/?', TestHandler),
-    webapp2.Route('/test/images', handler=TestHandler, handler_method="images"),
-    webapp2.Route('/test/populate', handler=TestHandler, handler_method="populate"),
-    webapp2.Route('/test/changes', handler=TestHandler,handler_method="changes"),
-    webapp2.Route('/test/sync', handler=TestHandler, handler_method="sync")
+    webapp2.Route('/test/images<:/?>', handler=TestHandler, handler_method="images"),
+    webapp2.Route('/test/populate<:/?>', handler=TestHandler, handler_method="populate"),
+    webapp2.Route('/test/changes<:/?>', handler=TestHandler,handler_method="changes"),
+    webapp2.Route('/test/sync<:/?>', handler=TestHandler, handler_method="sync")
 ], debug=True)

@@ -163,7 +163,10 @@ class Episode(object):
         return self.json.get('air_date')
 
     def aired(self):
-        air_date = datetime.strptime(self.json.get('air_date'), "%Y-%m-%d")
+        air_str = self.json.get('air_date')
+        if air_str is None:
+            return False
+        air_date = datetime.strptime(air_str, "%Y-%m-%d")
         return air_date <= datetime.now()
 
     def overview(self):

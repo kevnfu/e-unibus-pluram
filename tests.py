@@ -5,9 +5,9 @@ class TestHandler(BaseHandler):
         series_ids = [1408, 56570]
         nathan = 58957
         changed_ids = TMDB.tv_changed_ids()
-        self.write(len(changed_ids))
-        self.spacer()
-        self.write(len(set(changed_ids)))
+        
+        # for changed in changed_ids:
+        #     TMDB.series(changed)
 
 
     def spacer(self):

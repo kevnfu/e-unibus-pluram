@@ -35,6 +35,8 @@ class TMDB:
         # too many requests from this ip. cool off.
         if r.status_code == 429:
             retry_after = int(r.headers.get('retry-after'))
+            logging.warning(
+                "TMDB status_code 429, sleeping %d seconds" % (retry_after+1))
             time.sleep(retry_after + 1)
             r = urlfetch.fetch(url=url, headers={'Accept':'application/json'})
 

@@ -1,4 +1,4 @@
 cron:
 - description: daily sync with TMDB
   url: /tasks/sync
-  schedule: every day 09:27 # in UTC = 04:26 EST
+  schedule: every 12 hours #every day 09:27 # in UTC = 04:26 EST

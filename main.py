@@ -23,9 +23,11 @@ import pprint
 from oauth2client.appengine import OAuth2DecoratorFromClientSecrets
 from apiclient.discovery import build
 from google.appengine.api import memcache
+from google.appengine.api import taskqueue
 
 from database import *
 from utilities import *
+from tasks import TaskHandler
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
@@ -172,7 +174,7 @@ class MainHandler(BaseHandler):
         # user clicked add to watchlist
         series_id = int(self.request.get('series_id'))
         if series_id:
-            database.load_series(series_id)
+            TaskHandler.add_load_series(series_id)
             added_to_watchlist = database.watchlist_series(series_id, self.user)
 
         if added_to_watchlist:
@@ -185,6 +187,7 @@ class MainHandler(BaseHandler):
 class AccountHandler(BaseHandler):
     def get(self):
         self.redirect('/account/watchlist')
+
 
 class WatchlistHandler(BaseHandler):
     def get(self):

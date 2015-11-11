@@ -186,8 +186,16 @@ class MainHandler(BaseHandler):
             
 class AccountHandler(BaseHandler):
     def get(self):
-        self.redirect('/account/watchlist')
+        self.render('account.html')
 
+class WatchedHandler(BaseHandler):
+    def get(self):
+        self.write('Unimplemented')
+        return
+        if self.user is None:
+            self.redirect('/')
+
+        user_rating = UserRating.for_user(self.user)
 
 class WatchlistHandler(BaseHandler):
     def get(self):
@@ -197,7 +205,7 @@ class WatchlistHandler(BaseHandler):
 
         user_rating = UserRating.for_user(self.user)
         series_rated = ([Series.get_by_id(series_id) 
-            for series_id in user_rating.get_all_series_id()])
+            for series_id in iter(user_rating.series_ratings)])
         # TODO: implement sorting options here
         
         if not series_rated:
@@ -234,5 +242,6 @@ app = webapp2.WSGIApplication([
     ('/logout/?', LogoutHandler),
     ('/account/?', AccountHandler),
     ('/account/watchlist/?', WatchlistHandler),
+    ('/account/watched/?', WatchedHandler),
     (decorator.callback_path, decorator.callback_handler())
 ], debug=True)

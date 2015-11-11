@@ -5,9 +5,7 @@ from google.appengine.ext import ndb
 from oauth2client.appengine import CredentialsNDBProperty
 
 from tmdb import TMDB
-from datetime import datetime as dt
-from datetime import timedelta
-import datetime
+from datetime import datetime, timedelta
 
 class AppStat(ndb.Model):
     """Table for getting data about server"""
@@ -44,7 +42,7 @@ class Series(ndb.Model):
         json.pop('seasons', None)
 
         air_date_str = json.get('first_air_date')
-        air_date = (air_date_str and dt.strptime(air_date_str, "%Y-%m-%d"))
+        air_date = (air_date_str and datetime.strptime(air_date_str, "%Y-%m-%d"))
         external_ids = json.get('external_ids')
         imdb_id = (external_ids and external_ids.get('imdb_id'))
         
@@ -61,6 +59,9 @@ class Series(ndb.Model):
 
     def number_of_seasons(self):
         return self.json.get('number_of_seasons')
+
+    def number_of_episodes(self):
+        return self.json.get('number_of_episodes')
 
     def poster(self):
         return self.json.get('poster_path')
@@ -161,6 +162,10 @@ class Episode(object):
     def air_date(self):
         return self.json.get('air_date')
 
+    def aired(self):
+        air_date = datetime.strptime(self.json.get('air_date'), "%Y-%m-%d")
+        return air_date <= datetime.now()
+
     def overview(self):
         return self.json.get('overview')
 
@@ -180,11 +185,12 @@ class RatingCode:
 
 class BaseRating(object):
     """
-    ID field should match ID of the entity this rating is for
+    ID field should match ID of the user this rating is for
     """
-    def __init__(self, rating_id, value):
+    def __init__(self, rating_id, value, date=None):
         self.id = int(rating_id)
         self.value = int(value)
+        self.date = date or datetime.now()
 
     def watchlisted(self):
         return self.value == RatingCode.WATCHLIST
@@ -192,6 +198,9 @@ class BaseRating(object):
     def watched(self):
         return self.value == RatingCode.WATCHED
 
+    def set(self, value):
+        self.value = value
+        self.date = datetime.now()
 
 
 class UserRating(ndb.Model):
@@ -228,7 +237,10 @@ class UserRating(ndb.Model):
     #     self.movie_ratings[movie_rating.id] = movie_rating
 
     def get_all_series_id(self):
-        return self.series_ratings.keys()
+        return iter(self.series_ratings)
+
+    def get_all_series(self):
+        return self.series_ratings.iteritems()
 
     def set_series(self, rating):
         self.series_ratings[rating.id] = rating
@@ -273,7 +285,7 @@ class TmdbConfig(ndb.Model):
         if not config:
             return cls.refetch()
 
-        if ((config.last_modified - dt.now()) > 
+        if ((config.last_modified - datetime.now()) > 
             timedelta(cls.REFRESH_LATENCY)):
             return cls.refetch()
 
@@ -308,16 +320,8 @@ class database:
     def load_series(series_id):
         """
         Loads series, season, episode into db.
-        Returns True if added.
-        False if already added.
         """
         # TODO: handle None errors.
-
-        #check if already in database
-        series = Series.get_by_id(series_id)
-        if series is not None:
-            logging.info("Tried to re-add series %d" % series_id)
-            return False
 
         # fetch from TMDB
         series_json = TMDB.series(series_id)

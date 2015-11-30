@@ -54,6 +54,12 @@ class Series(ndb.Model):
             imdb_id=imdb_id,
             status=json.get('status'))
 
+    def to_json(self):
+        season_json = {k:v.to_json() for k,v in self.seasons.items()}
+        json = {'seasons' : season_json}
+        json.update(self.json)
+        return json
+
     def get_id(self):
         return self.key.integer_id() # == self.json.get('id')
 
@@ -111,6 +117,14 @@ class Season(object):
 
         return cls(json=json, episodes=episodes)
     
+    def to_json(self):
+        episode_json = {k:v.to_json() for k,v in self.episodes.items()}
+        json = {'episodes' : episode_json, 
+            'number_of_episodes' : len(self.episodes)}
+        json.update(self.json)
+        return json
+
+
     def get_id(self):
         return self.json.get('id')
 
@@ -150,6 +164,9 @@ class Episode(object):
     def from_json(cls, json):
         return cls(json=json)
 
+    def to_json(self):
+        return self.json
+
     def get_id(self):
         return self.json.get('id')
 
@@ -162,12 +179,12 @@ class Episode(object):
     def air_date(self):
         return self.json.get('air_date')
 
-    def aired(self):
+    def aired(self, within=7):
         air_str = self.json.get('air_date')
         if air_str is None:
             return False
         air_date = datetime.strptime(air_str, "%Y-%m-%d")
-        return air_date <= datetime.now()
+        return air_date <= (datetime.now() + timedelta(within))
 
     def overview(self):
         return self.json.get('overview')

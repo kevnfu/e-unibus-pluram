@@ -1,4 +1,7 @@
 secrets/
 lib/
+static/fonts/
 *.pyc
 *.ico
+bootstrap*
+npm.js

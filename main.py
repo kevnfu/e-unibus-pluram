@@ -19,6 +19,7 @@ import jinja2
 import logging
 import os
 import pprint
+import json
 
 from oauth2client.appengine import OAuth2DecoratorFromClientSecrets
 from apiclient.discovery import build
@@ -63,7 +64,11 @@ class BaseHandler(webapp2.RequestHandler):
 
     def render_json(self, d):
         self.response.headers['Content-Type'] = 'application/json; charset=UTF-8'
-        self.write(pprint.pformat(d))
+        self.response.headers['Access-Control-Allow-Origin'] = '*'
+        self.write(json.dumps(d))
+
+    def render_pp_json(self, d):
+        self.render_json(pprint.pformat(d))
 
     def set_secure_cookie(self, name, val):
         cookie_val = make_secure_val(val)
@@ -190,12 +195,7 @@ class AccountHandler(BaseHandler):
 
 class WatchedHandler(BaseHandler):
     def get(self):
-        self.write('Unimplemented')
-        return
-        if self.user is None:
-            self.redirect('/')
-
-        user_rating = UserRating.for_user(self.user)
+        self.render('my-shows.html', img_url=TmdbConfig.poster_path(0))
 
 class WatchlistHandler(BaseHandler):
     def get(self):
@@ -236,6 +236,26 @@ class WatchlistHandler(BaseHandler):
 
         self.redirect('/account/watchlist#' + series_div)
 
+class SeriesHandler(BaseHandler):
+    """
+    Exposes json for a Series
+    """
+    def get(self, *a, **kw):
+        series_id = int(kw.get('id'))
+
+        s = Series.get_by_id(series_id)
+        if s:
+            self.render_json(s.to_json())
+        else:
+            self.render_json({})
+
+class RatingHandler(BaseHandler):
+    def get(self):
+        if not self.user:
+            return
+
+        
+
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/login/?', LoginHandler),
@@ -243,5 +263,7 @@ app = webapp2.WSGIApplication([
     ('/account/?', AccountHandler),
     ('/account/watchlist/?', WatchlistHandler),
     ('/account/watched/?', WatchedHandler),
+    webapp2.Route(r'/series/<id:\d+><:/?>', handler=SeriesHandler),
+    ('/account/rating/?', RatingHandler),
     (decorator.callback_path, decorator.callback_handler())
 ], debug=True)

@@ -3,5 +3,6 @@ lib/
 static/fonts/
 *.pyc
 *.ico
+*.sublime*
 bootstrap*
 npm.js

@@ -1,112 +1,182 @@
+// Global vars
 var baseImgUrl = $('meta[name=img-url]').attr('content');
 var ratings;
+var seriesList;
+// classes
+var Ratings = function(json) {
+    this.json = json;
+};
+Ratings.prototype = {
+    constructor: Ratings,
+    getSeries: function(id) {
+        return this.json[id];
+    },
+    getSeason: function(id, s) {
+        var season = this.json[id].seasons[s];
+    },
+    postWatched: function() {
 
-var HTMLTableEntry = [
-    '<tr class="%classes%">',
-      '<td>%title%</td>',
-      '<td>5</td>',
-      '<td>%airdate%</td>',
-      '<td><input type="checkbox" %checked%></td>',
-    '</tr>'
-].join('\n');
-
-var buildEpisodeEntry = function(json) {
-    var str = HTMLTableEntry
-        .replace('%title%', ['S', json.season_number, 
-            'E', json.episode_number, ' ', json.name].join(''))
-        .replace('%airdate%', json.air_date)
-        .replace('%classes%', '');
-    if (true) {
-        str = str.replace('%checked%', 'checked');
-    } else {
-        str = str.replace('%checked%', '');
-    }
-    return str;
+    },
+    tracking: function(series) {
+        return this.json[series].tracking;
+    },
+    watchedEpisode: function(series, season, episode) {
+        var watched = false;
+        var season = this.json[series].seasons[season];
+        if (season===undefined || season.episodes[episode]===undefined) {
+            watched = false;
+        } else {
+            var episode = season.episodes[episode];
+            watched = episode.watched;
+        }
+        return watched;
+    },
 };
 
-var buildSeasonEntry = function(json) {
-    var str = HTMLTableEntry
-        .replace("%title%", 'Season ' + json.season_number)
-        .replace('%airdate%', json.air_date)
-        .replace('%classes%', 'success');
-    if (true) {
-        str = str.replace('%checked%', 'checked');
-    } else {
-        str = str.replace('%checked%', '');
-    }
-    return str;
-}
+var SeriesList = function() {
+    this.list = [];
+};
+SeriesList.prototype = {
+    constructor: SeriesList,
+    append: function(item) {
+        item.appendTo('#series-list');
+    },
+    addSeries: function(series) {
+        var ctx = this;
 
-var HTMLSeriesItem = [
-    '<div class="row series-item">',
-      '<div class="col-xs-12">',
-        '<a class="active toggler" href="#" data-toggle="collapse" data-target="#%target%">',
-          '<span class="glyphicon btn-lg glyphicon-triangle-right float-left"></span>',
-          '<span class="glyphicon btn-lg glyphicon-triangle-bottom float-left"></span>',
-          '<img class="image-responsive series-image" src="%imgurl%" alt="Poster">',
-          '<div>',
-            '<a href="#">%title%</a>',
-          '</div>',
-          '<div>',
-          '<a href="#">Rating</a>',
-          '</div>',
-        '</a>',
-      '</div>',
-    '</div>',
-    '<div id="%target%" class="collapse">',
-      '<table class="table table-hover">',
-        '<thead>',
-          '<tr>',
-            '<th>Title</th>',
-            '<th>Rating</th>',
-            '<th>Airdate</th>',
-            '<th>Watched</th>',
-          '</tr>',
-        '</thead>',
-        '<tbody>',
-          '%entries%',
-        '</tbody>',
-      '</table>',
-    '</div>'
-].join('\n');
+        $.getJSON('/series/' + series)  
+            .done(function(data) {
+                var newItem = (new SeriesItem(data));
+                ctx.list.push(newItem);
+                ctx.append(newItem.element);
+            })
+            .fail(function() {
+                console.log('loadSeries fail for ' + series);
+            });
+    },
+};
 
-var buildSeriesItem = function(json) {
-    var seasons = json.seasons;
-    var entries = "";
-    for (i = 1; i <= json.number_of_seasons; i++) {
-        var season = seasons[i];
-        entries += buildSeasonEntry(season);
-        for (j = 1; j <= season.number_of_episodes; j++) {
-            entries += buildEpisodeEntry(season.episodes[j]);
+var SeriesItem = function(json) {
+    this.json = json;
+    var newItem = $(buildSeriesItem(json.name, json.poster_path, json.id));
+    this.element = newItem;
+    
+    // set up element
+
+    // click listener for changing glyphicon
+    newItem.find('.float-left').click(function() {
+        $(this).toggleClass('active, inactive');
+    });
+
+    // set checked state
+    var series_checkbox = newItem.find('.series-check:first');
+    series_checkbox.prop('checked', ratings.tracking(json.id));
+
+    // click listener for series-checkbox
+    series_checkbox.click(function() {
+        $.post('/account/rating/tracking', {
+            series_id:json.id,
+            value:$(this).prop('checked')})
+            .done(function(){
+                console.log(series_checkbox.prop('checked'));
+            })
+            .fail(function(){
+                console.log('series track fail');
+            });
+    });
+
+    // build table
+    var tbody = newItem.find('tbody');
+    for (var i = 1; i <= json.number_of_seasons; i++) {
+        var season = json.seasons[i];
+        tbody.append(buildSeasonEntry(season));
+        for (var j = 1; j <= season.number_of_episodes; j++) {
+            var episode = season.episodes[j];
+            var entry = $(buildEpisodeEntry(json.id, episode));
+            entry.appendTo(tbody)
+
+            var checkbox = entry.find('input[type=checkbox]:first')
+            checkbox.click((function(i,j,c) {
+                return function(){
+                    $.post('/account/rating/watched', {
+                        series_id:json.id,
+                        season_num:i,
+                        episode_num:j,
+                        value:c.prop('checked')})
+                        .done(function() {
+                            console.log(c.prop('checked'));
+                        })
+                        .fail(function() {
+                            console.log('watch post failed');
+                        });
+                };
+            })(i,j,checkbox));
         };
     };
-    var str = HTMLSeriesItem.replace('%title%', json.name)
-        .replace('%entries%', entries)
-        .replace('%imgurl%', baseImgUrl + json.poster_path)
-        .replace(/%target%/g, json.id);
 
-    return str;
+};
+SeriesItem.prototype = {
+    constructor: SeriesItem,
+    name: function() {
+        return this.json.name;
+    },
+    poster_path: function() {
+        return this.json.poster_path;
+    },
 };
 
-var addSeriesItem = function(id) {
-    $('#series-list').append(buildSeriesItem(json));
-    $('#series-list').last().click(function() {
-          $(this).toggleClass('active, inactive');
-    });
-};
+var loadData = function() {
+    seriesList = new SeriesList();
 
-
-var loadSeries = function(id) {
-    $.getJSON('http://localhost:8080/series/' + id.toString())  
-        .done(function(data) {
-            addSeriesItem(data);
+    // get rating data
+    $.getJSON('/account/rating')
+        .done(function(data){
+            // initialize ratings object
+            ratings = new Ratings(data);
+            for(var id in data) {
+                console.log('loading: ' + id);
+                seriesList.addSeries(id);
+            };
         })
-        .fail(function() {
-            console.log('fail');
+        .fail(function(){
+            console.log('loadRatings fail');
         });
 };
 
+var attachListeners = function() {
+    // listeners for the all shows and watched options
+
+    $('#displayAll').click(function(){
+        $('.series-entry').each(function(){
+            $(this).show();
+        });
+
+        $('.series-item').each(function(){
+            var checked = $(this).find('.series-check:first').prop('checked');
+            $(this).show();
+        });
+    });
+
+    $('#displayWatchlist').click(function(){
+        $('.series-entry').each(function(){
+            var checkbox = $(this).find('.entry-check:first');
+            if (checkbox.prop('checked')) {
+                $(this).hide();
+            };
+        });
+
+        $('.series-item').each(function(){
+            var checked = $(this).find('.series-check:first').prop('checked');
+            console.log(checked);
+            if (!checked) {
+                $(this).hide();
+            };
+        });
+    });
+}
 
 $(document).ready(function(){
-    loadSeries(56570);
+    // loadSeries(56570);
+    loadData();
+    attachListeners();
 });

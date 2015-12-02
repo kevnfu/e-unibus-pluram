@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
+<div class="container">
 <div>
 <!-- Account stuff -->
 {% if user %}
@@ -42,6 +42,7 @@
         {% if user %}
         <td>
             <input type="hidden" name="series_id" value="{{series.get_id()}}">
+            <input type="hidden" name="series_name" value="{{series.name}}">
             <input type="submit" value="Add to watchlist">
         </td>
         {% endif %}
@@ -49,5 +50,5 @@
     </form>
 </table>
 {% endfor %}
-
+</div>
 {% endblock %}

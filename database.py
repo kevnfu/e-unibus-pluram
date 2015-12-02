@@ -41,7 +41,7 @@ class Series(ndb.Model):
         # don't store season info here
         json.pop('seasons', None)
 
-        air_date_str = json.get('first_air_date')
+        air_date_str = json.get('first_air_date') or None;
         air_date = (air_date_str and datetime.strptime(air_date_str, "%Y-%m-%d"))
         external_ids = json.get('external_ids')
         imdb_id = (external_ids and external_ids.get('imdb_id'))
@@ -55,9 +55,14 @@ class Series(ndb.Model):
             status=json.get('status'))
 
     def to_json(self):
-        season_json = {k:v.to_json() for k,v in self.seasons.items()}
-        json = {'seasons' : season_json}
+        seasons_json = {k:v.to_json() for k,v in self.seasons.items()}
+        json = {'seasons' : seasons_json}
         json.update(self.json)
+        return json
+
+    def seasons_json(self):
+        seasons_json = {k:v.to_json() for k,v in self.seasons.items()}
+        json = {'seasons' : seasons_json}
         return json
 
     def get_id(self):
@@ -203,25 +208,93 @@ class RatingCode:
     WATCHLIST = 200
     WATCHED = 201
 
-class BaseRating(object):
-    """
-    ID field should match ID of the user this rating is for
-    """
-    def __init__(self, rating_id, value, date=None):
-        self.id = int(rating_id)
-        self.value = int(value)
-        self.date = date or datetime.now()
+# class BaseRating(object):
+#     """
+#     ID field should match ID of the user this rating is for
+#     """
+#     def __init__(self, rating_id, value, date=None):
+#         self.id = int(rating_id)
+#         self.value = int(value)
+#         self.date = date or datetime.now()
 
-    def watchlisted(self):
-        return self.value == RatingCode.WATCHLIST
+#     def watchlisted(self):
+#         return self.value == RatingCode.WATCHLIST
+
+#     def watched(self):
+#         return self.value == RatingCode.WATCHED
+
+#     def set(self, value):
+#         self.value = value
+#         self.date = datetime.now()
+
+class BaseRating(object):
+    def __init__(self):
+        self.rating = 0
+        self.rated = datetime.now()
+        self.added = datetime.now()
+
+    def to_json(self):
+        return {'rating':self.rating}
+
+    def rate(self, value):
+        self.rated = datetime.now()
+        self.rating = value
+
+
+class SeriesRating(BaseRating):
+    def __init__(self, series_id, series_name, tracking=True):
+        super(SeriesRating, self).__init__()
+        self.id = int(series_id)
+        self.name = series_name
+        self.tracking = tracking
+        self.seasons = dict()
+
+    def to_json(self):
+        ret = super(SeriesRating, self).to_json()
+        ret.update({'id':self.id, 'name':self.name, 'tracking':self.tracking})
+        ret.update({'seasons':{k:v.to_json() for k,v in self.seasons.items()}})
+        return ret
+
+    def get_season(self, season_number):
+        return self.seasons.setdefault(season_number, SeasonRating())
+
+    def rate_season(self, season_number, value):
+        self.get_season(season_number).rate(value)
+
+    def rate_episode(self, season_number, episode_number, value):
+        self.get_season(season_number).get_episode(episode_number).rate(value)
+
+
+class SeasonRating(BaseRating):
+    def __init__(self):
+        super(SeasonRating, self).__init__()
+        self.episodes = dict()
+
+    def to_json(self):
+        ret = super(SeasonRating, self).to_json()
+        ret.update(
+            {'episodes':{k:v.to_json() for k,v in self.episodes.items()}})
+        return ret
+
+    def get_episode(self, episode_number):
+        return self.episodes.setdefault(episode_number, EpisodeRating())
 
     def watched(self):
-        return self.value == RatingCode.WATCHED
+        for episode in self.episodes.values():
+            if not episode.watched:
+                return False
 
-    def set(self, value):
-        self.value = value
-        self.date = datetime.now()
+        return True
 
+class EpisodeRating(BaseRating):
+    def __init__(self, watched=False):
+        super(EpisodeRating, self).__init__()
+        self.watched = watched
+
+    def to_json(self):
+        ret = super(EpisodeRating, self).to_json()
+        ret.update({'watched':self.watched})
+        return ret
 
 class UserRating(ndb.Model):
     """
@@ -230,16 +303,12 @@ class UserRating(ndb.Model):
     """
     # this will be a dict mapping series_id to SeriesRating
     series_ratings = ndb.PickleProperty()
-    season_ratings = ndb.PickleProperty()
-    episode_ratings = ndb.PickleProperty()
     movie_ratings = ndb.PickleProperty()
 
     @classmethod
     def new(cls, user):
         return cls(id=user.get_id(), 
             series_ratings=dict(),
-            season_ratings=dict(),
-            episode_ratings=dict(), 
             movie_ratings=dict())
 
     @classmethod
@@ -253,33 +322,22 @@ class UserRating(ndb.Model):
             user_rating = cls.new(user)
         return user_rating
 
+    def get_id(self):
+        return self.key.string_id()
+
     # def add_movie_rating(self, movie_rating):
     #     self.movie_ratings[movie_rating.id] = movie_rating
 
-    def get_all_series_id(self):
-        return iter(self.series_ratings)
-
-    def get_all_series(self):
-        return self.series_ratings.iteritems()
-
-    def set_series(self, rating):
-        self.series_ratings[rating.id] = rating
+    def set_series(self, series_id, series_name):
+        series = SeriesRating(series_id, series_name)
+        self.series_ratings[series_id] = series
 
     def get_series(self, series_id):
+        series_id = int(series_id)
         return self.series_ratings.get(series_id)
 
-    def set_season(self, rating):
-        self.season_ratings[rating.id] = rating
-
-    def get_season(self, season_id):
-        return self.season_ratings.get(season_id)
-
-    def set_episode(self, rating):
-        self.episode_ratings[rating.id] = rating
-
-    def get_episode(self, episode_id):
-        return self.episode_ratings.get(episode_id)
-
+    def get_all_series_json(self):
+        return {k:v.to_json() for k,v in self.series_ratings.items()}
 
 
 class TmdbConfig(ndb.Model):
@@ -358,7 +416,7 @@ class database:
 
     
     @staticmethod
-    def watchlist_series(series_id, user):
+    def watchlist_series(series_id, series_name, user):
         """
         Returns True if successful
         Returns False if already added
@@ -368,8 +426,7 @@ class database:
         if user_rating.get_series(series_id):
             return False
 
-        rating = BaseRating(series_id, RatingCode.WATCHLIST)
-        user_rating.set_series(rating)
+        user_rating.set_series(series_id, series_name)
         user_rating.put()
         return True
     

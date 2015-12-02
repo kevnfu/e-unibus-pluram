@@ -1,4 +1,5 @@
 from main import *
+from database import *
 
 class TestHandler(BaseHandler):
     def get(self, *a):
@@ -73,10 +74,14 @@ class TestHandler(BaseHandler):
     def populate(self, *a):
         pass
 
+    def copy(self, *a):
+        pass
+
 app = webapp2.WSGIApplication([
     ('/test/?', TestHandler),
     webapp2.Route('/test/images<:/?>', handler=TestHandler, handler_method="images"),
     webapp2.Route('/test/populate<:/?>', handler=TestHandler, handler_method="populate"),
     webapp2.Route('/test/changes<:/?>', handler=TestHandler,handler_method="changes"),
-    webapp2.Route('/test/sync<:/?>', handler=TestHandler, handler_method="sync")
+    webapp2.Route('/test/sync<:/?>', handler=TestHandler, handler_method="sync"),
+    webapp2.Route('/test/copy<:/?>', handler=TestHandler, handler_method="copy")
 ], debug=True)

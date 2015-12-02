@@ -39,18 +39,24 @@ body { padding-top: 70px; }
 .float-left {
     float: left;
     vertical-align: middle;
-    /*display: inline-block;*/
 }
 .series-item {
     margin-bottom: 10px;
 }
 
+.series-entry {
+}
+
 .series-image {
-    float: left;
     vertical-align: middle;
     margin-right: 10px;
 }
 .series-title {
 }
 .series-rating {
+}
+
+.series-check{
+}
+.entry-check{
 }

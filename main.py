@@ -25,6 +25,7 @@ from oauth2client.appengine import OAuth2DecoratorFromClientSecrets
 from apiclient.discovery import build
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
+from webapp2_extras import routes
 
 from database import *
 from utilities import *
@@ -68,7 +69,8 @@ class BaseHandler(webapp2.RequestHandler):
         self.write(json.dumps(d))
 
     def render_pp_json(self, d):
-        self.render_json(pprint.pformat(d))
+        self.response.headers['Content-Type'] = 'application/json; charset=UTF-8'
+        self.write(pprint.pformat(d))
 
     def set_secure_cookie(self, name, val):
         cookie_val = make_secure_val(val)
@@ -174,13 +176,15 @@ class MainHandler(BaseHandler):
             user=self.user, 
             series_list=series_list)
             
-
     def post(self):
         # user clicked add to watchlist
         series_id = int(self.request.get('series_id'))
+        series_name = self.request.get('series_name')
+
         if series_id:
             TaskHandler.add_load_series(series_id)
-            added_to_watchlist = database.watchlist_series(series_id, self.user)
+            added_to_watchlist = database.watchlist_series(
+                series_id, series_name, self.user)
 
         if added_to_watchlist:
             self.redirect('/')
@@ -191,7 +195,7 @@ class MainHandler(BaseHandler):
             
 class AccountHandler(BaseHandler):
     def get(self):
-        self.render('account.html')
+        self.render('my-shows.html', img_url=TmdbConfig.poster_path(0))
 
 class WatchedHandler(BaseHandler):
     def get(self):
@@ -251,10 +255,38 @@ class SeriesHandler(BaseHandler):
 
 class RatingHandler(BaseHandler):
     def get(self):
-        if not self.user:
+        if self.user is None:
             return
 
-        
+        ratings = UserRating.for_user(self.user)
+        self.render_json(ratings.get_all_series_json())
+
+    def watched(self, *a):
+        if self.user is None:
+            return
+
+        series_id = int(self.request.get('series_id'))
+        season_num = int(self.request.get('season_num'))
+        episode_num = int(self.request.get('episode_num'))
+        value = self.request.get('value') == 'true'
+
+        ratings = UserRating.for_user(self.user)
+        (ratings.get_series(series_id)
+            .get_season(season_num)
+            .get_episode(episode_num)
+            .watched) = value
+        ratings.put()
+
+    def tracking(self, *a):
+        if self.user is None:
+            return
+        series_id = int(self.request.get('series_id'))
+        value = self.request.get('value') == 'true'
+
+        ratings = UserRating.for_user(self.user)
+        ratings.get_series(series_id).tracking = value
+        ratings.put()
+
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
@@ -265,5 +297,9 @@ app = webapp2.WSGIApplication([
     ('/account/watched/?', WatchedHandler),
     webapp2.Route(r'/series/<id:\d+><:/?>', handler=SeriesHandler),
     ('/account/rating/?', RatingHandler),
+    webapp2.Route(r'/account/rating/watched<:/?>', 
+        handler=RatingHandler, handler_method='watched'),
+    webapp2.Route(r'/account/rating/tracking<:/?>',
+        handler=RatingHandler, handler_method='tracking'),
     (decorator.callback_path, decorator.callback_handler())
 ], debug=True)

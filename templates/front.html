@@ -1,17 +1,16 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
-<div>
+<div class="container-fluid">
 <!-- Account stuff -->
-{% if user %}
-<a href = "/account"}>{{user.name}}</a>
-|
-<a href = "/logout">Logout</a>
-{% else %}
-<a href="/login">Login</a>
-{% endif %}
-
+<div class="row col-xs-12">
+    {% if user %}
+    <a href = "/account"}>{{user.name}}</a>
+    |
+    <a href = "/logout">Logout</a>
+    {% else %}
+    <a href="/login">Login</a>
+    {% endif %}
 </div>
 
 <br><br>

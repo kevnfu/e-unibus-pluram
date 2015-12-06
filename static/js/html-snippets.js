@@ -1,43 +1,28 @@
 const HTMLTableEntry = [
-    '<tr id="%id%" class="series-entry %classes%">',
+    '<tr class="series-entry %classes%">',
       '<td>%title%</td>',
       '<td>5</td>',
       '<td>%airdate%</td>',
-      '<td><input class="entry-check" type="checkbox" %checked%></td>',
+      '<td><input class="entry-check" type="checkbox"></td>',
     '</tr>'
 ].join('\n');
 
-var buildSeasonEntry = function(json) {
+function buildSeasonEntry(json) {
     var str = HTMLTableEntry
         .replace("%title%", 'Season ' + json.season_number)
-        .replace('%airdate%', json.air_date)
-        .replace('%classes%', 'success')
-        .replace('%id%', 's' + json.season_number);
-    if (false) {
-        str = str.replace('%checked%', 'checked');
-    } else {
-        str = str.replace('%checked%', '');
-    }
+        .replace('%airdate%', json.airdate)
+        .replace('%classes%', 'success');
+
     return str;
 }
 
-var buildEpisodeEntry = function(series_id, json) {
+function buildEpisodeEntry(series_id, json) {
     var se = ['S', json.season_number, 
             'E', json.episode_number, ' ', json.name].join('');
     var str = HTMLTableEntry
         .replace('%title%', se)
         .replace('%airdate%', json.air_date)
-        .replace('%classes%', '')
-        .replace('%id%', se);
-
-    var watched = ratings.watchedEpisode(
-        series_id, json.season_number, json.episode_number);
-
-    if (watched) {
-        str = str.replace('%checked%', 'checked');
-    } else {
-        str = str.replace('%checked%', '');
-    };
+        .replace('%classes%', '');
 
     return str;
 };

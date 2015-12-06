@@ -195,7 +195,9 @@ class MainHandler(BaseHandler):
             
 class AccountHandler(BaseHandler):
     def get(self):
-        self.render('my-shows.html', img_url=TmdbConfig.poster_path(0))
+        self.render('my-shows.html', 
+            img_url=TmdbConfig.poster_path(0), 
+            user=self.user)
 
 class WatchedHandler(BaseHandler):
     def get(self):
@@ -261,13 +263,31 @@ class RatingHandler(BaseHandler):
         ratings = UserRating.for_user(self.user)
         self.render_json(ratings.get_all_series_json())
 
+    def post(self):
+        if self.user is None:
+            return
+
+        jDict = json.loads(self.request.body)
+        ratings = UserRating.for_user(self.user)
+
+        ratings.update_all_series(jDict)
+        ratings.put()
+
+
     def watched(self, *a):
+        # """
+        # If request doesn't have episode number,
+        # this will mark entire season as watched.
+        # """
         if self.user is None:
             return
 
         series_id = int(self.request.get('series_id'))
         season_num = int(self.request.get('season_num'))
         episode_num = int(self.request.get('episode_num'))
+
+        # if episode_num is None:
+
         value = self.request.get('value') == 'true'
 
         ratings = UserRating.for_user(self.user)

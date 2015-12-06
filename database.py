@@ -237,6 +237,8 @@ class BaseRating(object):
         return {'rating':self.rating}
 
     def rate(self, value):
+        if value is None:
+            return
         self.rated = datetime.now()
         self.rating = value
 
@@ -255,8 +257,20 @@ class SeriesRating(BaseRating):
         ret.update({'seasons':{k:v.to_json() for k,v in self.seasons.items()}})
         return ret
 
+    def set_tracking(self, value):
+        if value is None:
+            return
+        self.tracking = value
+
     def get_season(self, season_number):
         return self.seasons.setdefault(season_number, SeasonRating())
+
+    def changes(self, c):
+        self.rate(c.get('rating'))
+        self.set_tracking(c.get('tracking'))
+
+        for season_number, season_changes in c['seasons'].items():
+            self.get_season(season_number).changes(season_changes)
 
     def rate_season(self, season_number, value):
         self.get_season(season_number).rate(value)
@@ -279,6 +293,11 @@ class SeasonRating(BaseRating):
     def get_episode(self, episode_number):
         return self.episodes.setdefault(episode_number, EpisodeRating())
 
+    def changes(self, c):
+        self.rate(c.get('rating'))
+        for episode_number, episode_changes in c['episodes'].items():
+            self.get_episode(episode_number).changes(episode_changes)
+
     def watched(self):
         for episode in self.episodes.values():
             if not episode.watched:
@@ -295,6 +314,15 @@ class EpisodeRating(BaseRating):
         ret = super(EpisodeRating, self).to_json()
         ret.update({'watched':self.watched})
         return ret
+
+    def set_watched(self, value):
+        if value is None:
+            return
+        self.watched = value
+
+    def changes(self, c):
+        self.rate(c.get('rating'))
+        self.set_watched(c.get('watched'))
 
 class UserRating(ndb.Model):
     """
@@ -331,6 +359,7 @@ class UserRating(ndb.Model):
     def set_series(self, series_id, series_name):
         series = SeriesRating(series_id, series_name)
         self.series_ratings[series_id] = series
+        return series
 
     def get_series(self, series_id):
         series_id = int(series_id)
@@ -339,6 +368,13 @@ class UserRating(ndb.Model):
     def get_all_series_json(self):
         return {k:v.to_json() for k,v in self.series_ratings.items()}
 
+    def update_all_series(self, changes):
+        """
+        Changes is a json object
+        """
+        for series_id, series_changes in changes.items():
+            series = self.get_series(series_id) # should never be None
+            series.changes(series_changes)
 
 class TmdbConfig(ndb.Model):
     """Storage place for config"""

@@ -40,17 +40,24 @@ body { padding-top: 70px; }
     float: left;
     vertical-align: middle;
 }
-.series-item {
-    margin-bottom: 10px;
-}
-
-.series-entry {
-}
 
 .series-image {
     vertical-align: middle;
     margin-right: 10px;
 }
+.series-item {
+    margin-bottom: 10px;
+}
+
+/* entry is an episode */
+.series-entry {
+}
+
+/* entry is a season */
+.series-entry.success {
+
+}
+
 .series-title {
 }
 .series-rating {

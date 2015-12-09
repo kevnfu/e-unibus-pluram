@@ -31,7 +31,7 @@
 
     <!-- season items -->
     <tbody ng-controller="SeasonItemController" ng-hide="(mode && seasonWatched)"
-      ng-repeat="(seasonNum, seasonJson) in ::seriesJson.seasons">
+      ng-repeat="(seasonNum, seasonJson) in ::seriesJson.seasons track by seasonNum">
       <tr class="table-entry success">
         <td>Season {{::seasonNum}}</td>
         <td></td>
@@ -43,7 +43,7 @@
       <!-- episode items -->
       <tr class="table-entry" ng-controller="EpisodeItemController" 
         ng-hide="(mode && episodeRating.watched)"
-        ng-repeat="(episodeNum, episodeJson) in ::seasonJson.episodes">
+        ng-repeat="(episodeNum, episodeJson) in ::seasonJson.episodes track by episodeNum">
         <td>S{{::seasonNum}}E{{::episodeNum}} {{::episodeJson.name}}</td>
         <td>
           <uib-rating ng-model="episodeRating.rating" max="5" 

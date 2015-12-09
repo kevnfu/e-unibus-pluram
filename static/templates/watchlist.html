@@ -14,7 +14,7 @@
   </div>
   <!-- Series list -->
 
-  <series-item ng-repeat="seriesRating in ratings" 
+  <series-item ng-repeat="seriesRating in ratings track by seriesRating.id" 
     mode="mode" series-rating="seriesRating"
     is-collapsed="collapseList[$index]"
     index="{{::$index}}"

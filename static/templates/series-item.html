@@ -2,7 +2,7 @@
   <span ng-click="onToggle({index:index})" class="pull-left">
     <span class="glyphicon" ng-class="{'glyphicon-triangle-right':isCollapsed, 'glyphicon-triangle-bottom':!isCollapsed}"></span>
     <img class="series-image" alt="{{::seriesJson.name}} Poster"
-      ng-src="{{::baseImgUrl}}{{seriesJson.poster_path}}" />
+      ng-src="{{::baseImgUrl}}{{::seriesJson.poster_path}}" />
   </span>
   <span>
     <a href=""><h4>{{::seriesJson.name}}</h4></a>
@@ -31,7 +31,7 @@
 
     <!-- season items -->
     <tbody ng-controller="SeasonItemController" ng-hide="(mode && seasonWatched)"
-      ng-repeat="(seasonNum, seasonJson) in seriesJson.seasons">
+      ng-repeat="(seasonNum, seasonJson) in ::seriesJson.seasons">
       <tr class="table-entry success">
         <td>Season {{::seasonNum}}</td>
         <td></td>
@@ -43,7 +43,7 @@
       <!-- episode items -->
       <tr class="table-entry" ng-controller="EpisodeItemController" 
         ng-hide="(mode && episodeRating.watched)"
-        ng-repeat="(episodeNum, episodeJson) in seasonJson.episodes">
+        ng-repeat="(episodeNum, episodeJson) in ::seasonJson.episodes">
         <td>S{{::seasonNum}}E{{::episodeNum}} {{::episodeJson.name}}</td>
         <td>
           <uib-rating ng-model="episodeRating.rating" max="5" 

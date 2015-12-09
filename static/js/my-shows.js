@@ -29,7 +29,6 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
     $scope.collapseChanged = function(index) {
         index = parseInt(index);
         console.log("collapse changed " + index);
-        console.log(typeof index);
         
         var newList = $scope.collapseList.map(function(val, i) { 
             if (i===index) {
@@ -60,8 +59,8 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
             onToggle: "&"
         },
         // transclude: true,
-        controller: ["$scope", "$timeout", "Series", "Ratings", "Changes", "baseImgUrl", "convertDate", 
-            function SeriesItemController($scope, $timeout, Series, Ratings, Changes, baseImgUrl, convertDate) {
+        controller: ["$scope", "Series", "Ratings", "Changes", "baseImgUrl", "convertDate", 
+            function SeriesItemController($scope, Series, Ratings, Changes, baseImgUrl, convertDate) {
             $scope.baseImgUrl = baseImgUrl;
             $scope.Changes = Changes;
             // $scope.isCollapsed = true; // set by parent
@@ -78,11 +77,6 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
                 $scope.seriesJson = data;
                 Ratings.initSeries(data);
                 updateUnwatchedUnairedCount();
-                // notify all children that ratings has been initialized
-                // $timeout(function() {
-                //     console.log("broadcasting ratings-ready");
-                //     $scope.$broadcast("ratings-ready");
-                // }, 1000);
             });
 
             $scope.unwatchedEpisodes = 0; // episodes aired not yet watched
@@ -90,14 +84,15 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
             var updateUnwatchedUnairedCount = function() {
                 var unairedEpisodes = 0;
                 var unwatchedEpisodes = 0;
-                var seasons = $scope.seriesRating.seasons;
-                for (var season in seasons) {
-                    var episodes = seasons[season].episodes;
-                    for (var episode in episodes) {
-                        if(!episodes[episode].watched) {
-                            var episodeJson = $scope.seriesJson.seasons[season]
-                                .episodes[episode];
-                            if($scope.hasAired(episodeJson && episodeJson.air_date)) {
+                var seasonsJson = $scope.seriesJson.seasons;
+                for (var seasonNum in seasonsJson) {
+                    var episodesJson = seasonsJson[seasonNum].episodes;
+                    for (var episodeNum in episodesJson) {
+                        var episodeJson = episodesJson[episodeNum];
+                        var episodeRating = $scope.seriesRating
+                            .seasons[seasonNum].episodes[episodeNum]
+                        if(!episodeRating.watched) {
+                            if($scope.hasAired(episodeJson.air_date)) {
                                 unwatchedEpisodes++;
                             } else {
                                 unairedEpisodes++;
@@ -135,17 +130,11 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
 
     function getSeasonWatched() {
         var watched = true;
-        for (var episode in $scope.seasonRating.episodes) {
+        for (var episode in $scope.seasonJson.episodes) {
             watched = watched && $scope.seasonRating.episodes[episode].watched;
         };
         $scope.seasonWatched = watched;
     }
-
-    // $scope.$on("ratings-ready", function() {
-    //     console.log("season received ratings-ready");
-    //     $scope.seasonRating = $scope.seriesRating.seasons[$scope.seasonNum];
-    //     getSeasonWatched(); 
-    // });
 
     $scope.$on("episode-watched-changed", function() {
         getSeasonWatched();

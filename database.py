@@ -56,8 +56,9 @@ class Series(ndb.Model):
 
     def to_json(self):
         seasons_json = {k:v.to_json() for k,v in self.seasons.items()}
-        json = {'seasons' : seasons_json}
-        json.update(self.json)
+        json = {k:self.json[k] for k in 
+            ('id', 'name', 'poster_path', 'first_air_date', 'number_of_seasons')}
+        json.update({'seasons':seasons_json})
         return json
 
     def seasons_json(self):
@@ -124,9 +125,8 @@ class Season(object):
     
     def to_json(self):
         episode_json = {k:v.to_json() for k,v in self.episodes.items()}
-        json = {'episodes' : episode_json, 
-            'number_of_episodes' : len(self.episodes)}
-        json.update(self.json)
+        json = {k:self.json[k] for k in ['id', 'air_date']}
+        json.update({'episodes':episode_json})
         return json
 
 
@@ -170,7 +170,9 @@ class Episode(object):
         return cls(json=json)
 
     def to_json(self):
-        return self.json
+        json = {k:self.json[k] for k in 
+            ('name', 'air_date')}
+        return json
 
     def get_id(self):
         return self.json.get('id')

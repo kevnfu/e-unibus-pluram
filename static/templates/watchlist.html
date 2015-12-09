@@ -1,0 +1,24 @@
+<div class="container-fluid" ng-controller="ListController">
+  <div class="row col-xs-12 text-center">
+    <h1>TV LIST</h1>
+  </div>
+  <div class="row col-xs-12 text-center" style="margin-bottom: 20px">
+    <div class="btn-group">
+      <label class="btn btn-default" ng-model="mode" uib-btn-radio="true">
+        Watchlist
+      </label>
+      <label class="btn btn-default" ng-model="mode" uib-btn-radio="false">
+        All Shows
+      </label>
+    </div>
+  </div>
+  <!-- Series list -->
+
+  <series-item ng-repeat="seriesRating in ratings" 
+    mode="mode" series-rating="seriesRating"
+    is-collapsed="collapseList[$index]"
+    index="{{$index}}"
+    on-toggle="collapseChanged(index)">
+  </series-item>
+
+</div>

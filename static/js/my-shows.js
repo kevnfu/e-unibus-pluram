@@ -1,364 +1,202 @@
-// (function() {
+(function() {
 
-// Global vars
-var baseImgUrl = $('meta[name=img-url]').attr('content'),
-    ratings,
-    seriesList;
-
-// function baseImgUrl() {
-//     return $('meta[name=img-url]').attr('content');
-// };
-
-// enum for page mode
-var mode = {
-    watchlist: "watchlist",
-    all: "all",
-    sync: false,
-    async: true
-};
-
-function pageMode(mode) {
-    var currentMode = $('#pagemode').find('.active:first').data('value');
-    if (mode===currentMode) {
-        return true;
-    } else {
-        return false;
-    }
-};
-
-// Models
-
-function Changes() {
-    this.json = {};
-}
-Changes.prototype = {
-    getSeries: function(series) {
-        return seriesChanges = this.json[series] 
-            || (this.json[series] = {
-                // 'name':seriesList.seriesItem(series).name(), 
-                'seasons':{}});
-    },
-    getSeason: function(series, season) {
-        var seriesChanges = this.getSeries(series);
-        return seriesChanges.seasons[season] 
-            || (seriesChanges.seasons[season] = {'episodes':{}});
-    },
-    getEpisode: function(series, season, episode) {
-        var seasonChanges = this.getSeason(series, season);
-        return seasonChanges.episodes[episode] 
-            || (seasonChanges.episodes[episode] = {});
-    },
-    post: function(mode) {
-        if($.isEmptyObject(this.json)) { 
-            console.log('No changes to sync');
-            return; 
-        };
-
-        jString = JSON.stringify(this.json);
-        console.log('syncing changes: ' + jString);
-        $.ajax({
-            url: '/account/rating',
-            type: 'POST',
-            async: mode,
-            success: function(){console.log("posted changes")},
-            data: jString,
-            contentType: "application/json",
-            dataType: 'json'});
-
-        this.json = {};
-    }
-}
-
-function Ratings(json) {
-    this.json = json;
-    this.ordered = [];
-    for (var key in json) {
-        this.ordered.push(json[key])
-    };
-    this.changes = new Changes();
-};
-Ratings.prototype = {
-    episodeWatched: function(series, season, episode) {
-        var watched = false;
-        var season = this.json[series].seasons[season];
-        if (season===undefined || season.episodes[episode]===undefined) {
-            watched = false;
-        } else {
-            var episode = season.episodes[episode];
-            watched = episode.watched;
-        };
-        return watched;
-    },
-    setEpisodeWatched: function(series, season, episode, watched) {
-        this.changes.getEpisode(series, season, episode)['watched'] = watched;
-    },
-    setTracking: function(series, tracking) {
-        // series id and boolean tracking
-        this.changes.getSeries(series)['tracking'] = tracking;
-    },
-    tracking: function(series) {
-        return this.json[series].tracking;
-    },
-    watchedSeason: function(series, season) {
-        var seasonRating = this.json[series].seasons[season],
-            season = seriesList.seriesItem(series, season);
-
-        for(ep in season) {
-            seasonRating[ep].watched = true;
-        };
-    },
-    sortAlpha: function() {
-        this.ordered.sort(function(a,b) {
-            return a.name.localeCompare(b.name);
-        });
-        return this.ordered;
-    }
-};
-
-// wrappers around json data
-function Series(json) {
-    this.json = json;
-    this.seasons = {};
-    for (num in json.seasons) {
-        this.seasons[num] = new Season(this, json.seasons[num]);
-    };
-};
-Series.prototype = {
-    id: function() { return this.json.id; },
-    name: function() { return this.json.name; },
-    airDate: function() { return this.json.air_date; },
-    poster: function() { return this.json.poster_path; },
-    season: function(num) { return this.json.seasons[num]; }
-};
-
-function Season(parent, json) {
-    this.parent = parent;
-    this.json = json;
-    this.episodes = {};
-    for (num in json.episodes) {
-        this.episodes[num] = new Episode(this, json.episodes[num]);
-    };
-};
-Season.prototype = {
-    number: function() { return this.json.season_number; },
-    name: function() { return "Season " + this.number() },
-    airDate: function() { return this.json.air_date; },
-    episode: function(num) { return this.episodes[num]; }
-};
-
-function Episode(parent, json) {
-    this.parent = parent;
-    this.json = json;
-};
-Episode.prototype = {
-    number: function() { return this.json.episode_number; },
-    name: function() { return this.json.name; },
-    airDate: function() { return this.json.air_date; },
-};
-
-// views
-function SeriesList() {
-    // map from series id to seriesitem
-    this.map = {};
-};
-SeriesList.prototype = {
-    append: function(item) {
-        item.appendTo('#series-list');
-    },
-    seriesItem: function(series) {
-        return this.map[series];
-    },
-    addSeries: function(series) {
-        var ctx = this;
-
-        $.getJSON('/series/' + series)  
-            .done(function(data) {
-                var newItem = (new SeriesItem(data));
-                ctx.map[data.id] = newItem;
-                ctx.append(newItem.element);
-            })
-            .fail(function() {
-                console.log('loadSeries fail for ' + series);
-            });
-    },
-};
-
- function SeriesItem(json) {
-    this.json = json;
-    var newItem = $(buildSeriesItem(json.name, 
-        baseImgUrl + json.poster_path, json.id));
-    this.element = newItem;
+angular.module("app", ["ui.bootstrap", "ngAnimate", 
+    "services", "navbar"])
     
-    // set up element
+.controller("ListController", ["$scope", "$http", "$interval", "Ratings", "Changes", 
+    function ListController($scope, $http, $interval, Ratings, Changes) {
+    $scope.mode = true; // set default mode true = watchlist.
+    // convert Ratings to a list ordered alphabetically by name
+    $scope.ratings = [];
+    $scope.collapseList = [];
+    Ratings.get().then(function(data) {
+        for (k in data) {
+            $scope.data = data;
+            $scope.ratings.push(data[k]);    
+        }
+        $scope.ratings.sort(function(a,b) { return a.name.localeCompare(b.name); });
 
-    // click listener for changing glyphicon
-    newItem.find('.float-left').click(function() {
-        $(this).toggleClass('active, inactive');
+        // initialize collapseList
+        var booleanArray = [];
+        for (var i=0; i < $scope.ratings.length; i++) {
+            booleanArray.push(true);
+        }
+        $scope.collapseList = booleanArray;
     });
 
-    // set tracking state of series-item
-    var trackingSeries = ratings.tracking(json.id);
-    var series_checkbox = newItem.find('.series-check:first');
-    series_checkbox.prop('checked', trackingSeries);
-    if (!trackingSeries && pageMode(mode.watchlist)) {
-        newItem.hide();
+    $scope.collapseChanged = function(index) {
+        index = parseInt(index);
+        console.log("collapse changed " + index);
+        console.log(typeof index);
+        
+        var newList = $scope.collapseList.map(function(val, i) { 
+            if (i===index) {
+                return !val; // toggle the changed element
+            } else {
+                return true; // collapse all others
+            };
+        });
+
+        $scope.collapseList = newList;
     };
 
-    // click listener for series tracking
-    series_checkbox.click(function() {
-        var checked = $(this).prop('checked');
-        ratings.setTracking(json.id, checked);
-        if (!checked && pageMode(mode.watchlist)) {
-            $(this).closest('.series-item').hide();
+    var updatePromise = $interval(function(){ Changes.post(); }, 2000);
+    $scope.$on('$destroy', function() {
+        console.log("update interval cancelled");
+        $interval.cancel(updatePromise);
+    });
+}])
+.directive("seriesItem", function() {
+    return {
+        restrict: "E",
+        templateUrl: "/static/templates/series-item.html",
+        scope: {
+            mode: "=",
+            seriesRating: "=",
+            isCollapsed: "=",
+            index: "@",
+            onToggle: "&"
+        },
+        // transclude: true,
+        controller: ["$scope", "$timeout", "Series", "Ratings", "Changes", "baseImgUrl", "convertDate", 
+            function SeriesItemController($scope, $timeout, Series, Ratings, Changes, baseImgUrl, convertDate) {
+            $scope.baseImgUrl = baseImgUrl;
+            $scope.Changes = Changes;
+            // $scope.isCollapsed = true; // set by parent
+            $scope.seriesJson = {};
+
+            var now = new Date(); // used to tell if an episode has aired
+            $scope.hasAired = function(otherDate) {
+                if(!otherDate) return false;
+                return otherDate.getTime() < now.getTime();
+            };
+
+            Series.get($scope.seriesRating.id).then(function success(data){
+                console.log()
+                $scope.seriesJson = data;
+                Ratings.initSeries(data);
+                updateUnwatchedUnairedCount();
+                // notify all children that ratings has been initialized
+                $timeout(function() {
+                    console.log("broadcasting ratings-ready");
+                    $scope.$broadcast("ratings-ready");
+                }, 1000);
+            });
+
+            $scope.unwatchedEpisodes = 0; // episodes aired not yet watched
+            $scope.unairedEpisodes = 0; // episodes not yet aired
+            var updateUnwatchedUnairedCount = function() {
+                var unairedEpisodes = 0;
+                var unwatchedEpisodes = 0;
+                var seasons = $scope.seriesRating.seasons;
+                for (var season in seasons) {
+                    var episodes = seasons[season].episodes;
+                    for (var episode in episodes) {
+                        if(!episodes[episode].watched) {
+                            var airedDate = $scope.seriesJson.seasons[season]
+                                .episodes[episode].air_date;
+                            if($scope.hasAired(airedDate)) {
+                                unwatchedEpisodes++;
+                            } else {
+                                unairedEpisodes++;
+                            };
+                        };
+                    }
+                }
+                $scope.unwatchedEpisodes = unwatchedEpisodes;
+                $scope.unairedEpisodes = unairedEpisodes;
+            }
+            
+            // event listeners
+            $scope.checkboxChanged = function() {
+                Changes.getSeries($scope.seriesJson.id).tracking = 
+                    $scope.seriesRating.tracking;
+            };
+
+            $scope.ratingChanged = function() {
+                Changes.getSeries($scope.seriesJson.id).rating = 
+                    $scope.seriesRating.rating;
+            }
+
+            $scope.$on("episode-watched-changed", function() {
+                updateUnwatchedUnairedCount();
+            });
+        }]
+    }
+})
+.controller("SeasonItemController", ["$scope",
+    function SeasonEntryController($scope) {
+    $scope.seasonWatched = false;
+    
+    function getSeasonWatched() {
+        var watched = true;
+        for (var episode in $scope.seasonRating.episodes) {
+            watched = watched && $scope.seasonRating.episodes[episode].watched;
         };
+        $scope.seasonWatched = watched;
+    }
+
+    $scope.$on("ratings-ready", function() {
+        console.log("season received ratings-ready");
+        $scope.seasonRating = $scope.seriesRating.seasons[$scope.seasonNum];
+        getSeasonWatched(); 
     });
 
-    // build table
-    var tbody = newItem.find('tbody');
-    for (var i = 1; i <= json.number_of_seasons; i++) {
-        var season = json.seasons[i];
-        var seasonEntry = $(buildSeasonEntry(season));
+    $scope.$on("episode-watched-changed", function() {
+        getSeasonWatched();
+    });
 
-        // clicking watched for season will set children episodes
-        seasonEntry.find('input[type=checkbox]:first').click(function() {
-            var checked = $(this).prop('checked');
-            console.log("marking season watched " + checked);
-            if (pageMode(mode.watchlist)) {
-                $(this).closest(".series-entry").hide();
-            };
+    $scope.checkboxChanged = function() {
+        var episodes = $scope.seasonRating.episodes;
+        for (var episodeNum in episodes) {
+            var episode = episodes[episodeNum];
+            // don't need to do anything if episode.watched will not change
+            if (episode.watched === $scope.seasonWatched) continue;
 
-            //click all children
-            $(this).closest('.series-entry').nextUntil('.success').each(function() {
-                var episodeCheckbox = $(this).find('input[type=checkbox]:first');
-                if (episodeCheckbox.prop('checked') !== checked) {
-                    episodeCheckbox.click();
-                };
-            });
-        });
-
-        tbody.append(seasonEntry);
-        var watchedSeason = true;
-        for (var j = 1; j <= season.number_of_episodes; j++) {
-            var episode = season.episodes[j];
-            var entry = $(buildEpisodeEntry(json.id, episode));
-            var watchedEpisode = ratings.episodeWatched(json.id, i, j);
-            var checkbox = entry.find('input[type=checkbox]:first');
-
-            checkbox.prop('checked', watchedEpisode);
-            entry.appendTo(tbody);
-
-            // every episode must be watched for season to be watched
-            watchedSeason &= watchedEpisode;
-
-            if (watchedEpisode && pageMode(mode.watchlist)) {
-                checkbox.closest('.series-entry').hide();
-            };
-
-            checkbox.click((function(i,j) {
-                return function() {
-                    var checked = $(this).prop('checked');
-                    ratings.setEpisodeWatched(json.id, i, j, checked);
-                    if (checked && pageMode(mode.watchlist)) {
-                        $(this).closest('.series-entry').hide();
-                    };
-                };
-            })(i,j));
-        };
-
-        // update season watched  checkbox
-        seasonEntry.find('input[type=checkbox]:first').prop('checked', watchedSeason);
-        if(watchedSeason && pageMode(mode.watchlist)) {
-            seasonEntry.hide();
-        };
-
+            // don't marked unaired episodes watched
+            if ($scope.hasAired($scope.seasonJson.episodes[episodeNum].air_date)) {
+                episode.watched = $scope.seasonWatched;
+                $scope.Changes.getEpisode(
+                    $scope.seriesJson.id, 
+                    $scope.seasonNum, 
+                    episodeNum).watched = $scope.seasonWatched;
+            }
+        }
+        // emit also notifies own scope, so seasonWatched will be updated
+        $scope.$emit("episode-watched-changed");
     };
-
-};
-SeriesItem.prototype = {
-    constructor: SeriesItem,
-    name: function() {
-        return this.json.name;
-    },
-    poster_path: function() {
-        return this.json.poster_path;
-    },
-    season: function(i) {
-        return this.json.seasons[i];
-    },
-};
-
-function loadData() {
-    seriesList = new SeriesList();
-
-    // get rating data
-    $.getJSON('/account/rating')
-        .done(function(data){
-            // initialize ratings object
-            ratings = new Ratings(data);
-            ratings.sortAlpha();
-
-            for(var i=0; i<ratings.ordered.length; i++) {
-                var id = ratings.ordered[i].id
-                console.log('loading: ' + id);
-                seriesList.addSeries(id);
-            };
-        })
-        .fail(function(){
-            console.log('loadRatings fail');
-        });
-};
-
-function attachListeners() {
-    // listeners for the all shows and watched options
-    $('#all-btn').click(function() {
-        $('.series-entry').each(function(){
-                $(this).show();
-            });
-
-            $('.series-item').each(function(){
-                var checked = $(this).find('.series-check:first').prop('checked');
-                $(this).show();
-            });
+}])
+.controller("EpisodeItemController", ["$scope", function EpisodeEntryController($scope) {
+    $scope.episodeRating = undefined;
+    $scope.episodeNotAired = !$scope.hasAired($scope.episodeJson.air_date);
+    $scope.$on("ratings-ready", function() {
+        console.log("episode received ratings-ready");
+        $scope.episodeRating = $scope.seasonRating.episodes[$scope.episodeNum];
     });
 
-    $('#watchlist-btn').click(function() {
-        $('.series-entry').each(function(){
-            var checkbox = $(this).find('.entry-check:first');
-            if (checkbox.prop('checked')) {
-                $(this).hide();
-            };
-        });
+    $scope.checkboxChanged = function() {
+        $scope.Changes
+            .getEpisode(
+                $scope.seriesJson.id, 
+                $scope.seasonNum, 
+                $scope.episodeNum).watched = $scope.episodeRating.watched 
 
-        $('.series-item').each(function(){
-            var checked = $(this).find('.series-check:first').prop('checked');
-            console.log(checked);
-            if (!checked) {
-                $(this).hide();
-            };
-        });
-    });
-};
+        $scope.$emit("episode-watched-changed");
+    }
 
-// document events
-$(document).ready(function(){
-    loadData();
-    attachListeners();
-    var date = new Date();
-});
+    $scope.ratingChanged = function() {
+        $scope.Changes
+            .getEpisode(
+                $scope.seriesJson.id, 
+                $scope.seasonNum, 
+                $scope.episodeNum).rating = $scope.episodeRating.rating;
+        if ($scope.episodeRating.rating != 0 && !$scope.episodeRating.watched) {
+            // any non-zero rating will mark episode watched
+            $scope.episodeRating.watched = true;
+            $scope.checkboxChanged();
+        }
+    }
 
-window.onbeforeunload = function() {
-    ratings.changes.post(mode.sync);
-};
+}])
 
-// sync w/ server on intervals
-(function sync(){
-    if (ratings){
-        ratings.changes.post(mode.async);
-    };
-    setTimeout(sync, 10000);
 })();
-
-
-// })();
-
-

@@ -1,3 +1,5 @@
+/* Navbar settings */
+
 body { padding-top: 70px; }
 
 @media(max-width:767px) {
@@ -22,6 +24,7 @@ body { padding-top: 70px; }
     box-shadow: none;
 }
 
+/* how <a> tags appear */
 .submit_link{
     background: none;
     border: none;
@@ -30,40 +33,23 @@ body { padding-top: 70px; }
     cursor: pointer;
 }
 
-.active span.glyphicon-triangle-right { display:inline-block; }
-.active span.glyphicon-triangle-bottom { display:none; }
-
-.inactive span.glyphicon-triangle-bottom { display:inline-block; }
-.inactive span.glyphicon-triangle-right { display:none; }
-
-.float-left {
-    float: left;
-    vertical-align: middle;
-}
-
-.series-image {
-    vertical-align: middle;
-    margin-right: 10px;
-}
+/* custom elements */
 .series-item {
     margin-bottom: 10px;
 }
 
-/* entry is an episode */
-.series-entry {
+.series-image {
+    margin-right: 10px;
 }
 
-/* entry is a season */
-.series-entry.success {
-
+/* series label "Unwatched episodes:"" */
+.unwatched-label {
+    color:IndianRed;
 }
 
-.series-title {
+/* <tr> for season */
+.table-entry.success {
 }
-.series-rating {
-}
-
-.series-check{
-}
-.entry-check{
+/* <tr> for episode */
+.table-entry {
 }

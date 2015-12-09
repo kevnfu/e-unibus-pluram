@@ -195,9 +195,13 @@ class MainHandler(BaseHandler):
             
 class AccountHandler(BaseHandler):
     def get(self):
+        if self.user is None:
+            self.redirect("/")
+            return
+
         self.render('my-shows.html', 
             img_url=TmdbConfig.poster_path(0), 
-            user=self.user)
+            name=self.user.name)
 
 class WatchedHandler(BaseHandler):
     def get(self):
@@ -251,6 +255,7 @@ class SeriesHandler(BaseHandler):
 
         s = Series.get_by_id(series_id)
         if s:
+            
             self.render_json(s.to_json())
         else:
             self.render_json({})

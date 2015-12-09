@@ -1,44 +1,49 @@
 (function() {
 
-angular.module("app", ["ui.bootstrap", "ngAnimate", 
-    "services", "navbar"])
+angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     
 .controller("ListController", ["$scope", "$http", "$interval", "Ratings", "Changes", 
     function ListController($scope, $http, $interval, Ratings, Changes) {
     $scope.mode = true; // set default mode true = watchlist.
+    $scope.searchTerm = ""; // search term in navbar
+    
     // convert Ratings to a list ordered alphabetically by name
     $scope.ratings = [];
-    $scope.collapseList = [];
+    $scope.collapseMap = {};
 
     // get ratings from server
     Ratings.get().then(function(data) {
+        // convert ratings data (an object) into an array
         for (k in data) {
             $scope.data = data;
             $scope.ratings.push(data[k]);    
         }
+        // alphabetically
         $scope.ratings.sort(function(a,b) { return a.name.localeCompare(b.name); });
 
-        // initialize collapseList
-        var booleanArray = [];
-        for (var i=0; i < $scope.ratings.length; i++) {
-            booleanArray.push(true);
+        // initialize collapseMap
+        for (var i in $scope.ratings) {
+            var rating = $scope.ratings[i];
+            $scope.collapseMap[rating.id] = true;
         }
-        $scope.collapseList = booleanArray;
     });
 
-    $scope.collapseChanged = function(index) {
-        index = parseInt(index);
-        console.log("collapse changed " + index);
+    $scope.$watch("searchTerm", function() {
+        var re = new RegExp($scope.searchTerm);
         
-        var newList = $scope.collapseList.map(function(val, i) { 
-            if (i===index) {
-                return !val; // toggle the changed element
-            } else {
-                return true; // collapse all others
-            };
-        });
+    });
 
-        $scope.collapseList = newList;
+    $scope.collapseChanged = function(seriesId) {
+        console.log("collapse changed " + seriesId);
+        
+        for (var id in $scope.collapseMap) {
+            id = parseInt(id);
+            if (id===seriesId) {
+                 $scope.collapseMap[id] = !$scope.collapseMap[id];
+            } else {
+                $scope.collapseMap[id] = true;
+            }
+        }
     };
 
     var updatePromise = $interval(function(){ Changes.post(); }, 2000);
@@ -55,7 +60,6 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
             mode: "=",
             seriesRating: "=",
             isCollapsed: "=",
-            index: "@",
             onToggle: "&"
         },
         // transclude: true,

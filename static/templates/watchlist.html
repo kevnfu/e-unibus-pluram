@@ -1,4 +1,4 @@
-<div class="container-fluid" ng-controller="ListController">
+<div class="container-fluid">
   <div class="row col-xs-12 text-center">
     <h1>TV LIST</h1>
   </div>
@@ -15,10 +15,10 @@
   <!-- Series list -->
 
   <series-item ng-repeat="seriesRating in ratings track by seriesRating.id" 
-    mode="mode" series-rating="seriesRating"
-    is-collapsed="collapseList[$index]"
-    index="{{::$index}}"
-    on-toggle="collapseChanged(index)">
+    mode="mode" series-rating="::seriesRating"
+    is-collapsed="collapseMap[seriesRating.id]"
+    on-toggle="collapseChanged(id)"
+    ng-hide="seriesRating.name.toLowerCase().indexOf(searchTerm.toLowerCase())">
   </series-item>
 
 </div>

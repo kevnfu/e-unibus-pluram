@@ -34,6 +34,10 @@ body { padding-top: 70px; }
 }
 
 /* custom elements */
+/* the rightmost element in navbar */
+.navbar-brand {
+}
+
 .series-item {
     margin-bottom: 10px;
 }

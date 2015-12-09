@@ -1,3 +1,5 @@
+(function(){
+
 angular.module("navbar", [])
 .value("userName", $('meta[name=user-name]').attr('content'))
 
@@ -13,6 +15,9 @@ angular.module("navbar", [])
 .directive("navBar", function() {
     return {
         restrict: "E",
+        scope: {
+            searchTerm: "="
+        },
         templateUrl: "/static/templates/navbar.html",
         controller: ["$scope", "userName", function($scope, userName) {
             $scope.name = userName;
@@ -24,3 +29,4 @@ angular.module("navbar", [])
     };
 });
 
+})();

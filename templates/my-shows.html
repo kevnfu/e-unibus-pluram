@@ -7,15 +7,15 @@
 {% endblock %}
 
 {% block content %}
-<div ng-app="app">
-  <nav-bar></nav-bar>
+<div ng-app="app" ng-controller="ListController">
+    <nav-bar search-term="searchTerm"></nav-bar>
 
-  <ng-include src="'static/templates/watchlist.html'"></ng-include>
+    <ng-include src="'static/templates/watchlist.html'"></ng-include>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/my-shows.js"></script>
+<script src="/static/js/app.js"></script>
 <script src="/static/js/services.js"></script>
 <script src="/static/js/navbar.js"></script>
 {% endblock %}

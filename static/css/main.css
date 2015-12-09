@@ -51,7 +51,9 @@ body { padding-top: 70px; }
     color:IndianRed;
 }
 
-/* <tr> for season */
+/* <tr> for season
+ * .success is a bootstrap class that makes the table entry green
+ */
 .table-entry.success {
 }
 /* <tr> for episode */

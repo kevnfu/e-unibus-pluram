@@ -27,10 +27,11 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             $scope.collapseMap[rating.id] = true;
         }
     });
-
+    function escapeRegExp(str) {
+      return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+    }
     $scope.$watch("searchTerm", function() {
-        var re = new RegExp($scope.searchTerm);
-        
+        $scope.searchTermRegex = new RegExp(escapeRegExp($scope.searchTerm.toLowerCase()));
     });
 
     $scope.collapseChanged = function(seriesId) {

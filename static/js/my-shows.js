@@ -9,6 +9,8 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
     // convert Ratings to a list ordered alphabetically by name
     $scope.ratings = [];
     $scope.collapseList = [];
+
+    // get ratings from server
     Ratings.get().then(function(data) {
         for (k in data) {
             $scope.data = data;
@@ -93,9 +95,9 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
                     var episodes = seasons[season].episodes;
                     for (var episode in episodes) {
                         if(!episodes[episode].watched) {
-                            var airedDate = $scope.seriesJson.seasons[season]
-                                .episodes[episode].air_date;
-                            if($scope.hasAired(airedDate)) {
+                            var episodeJson = $scope.seriesJson.seasons[season]
+                                .episodes[episode];
+                            if($scope.hasAired(episodeJson && episodeJson.air_date)) {
                                 unwatchedEpisodes++;
                             } else {
                                 unairedEpisodes++;
@@ -154,7 +156,8 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
             if (episode.watched === $scope.seasonWatched) continue;
 
             // don't marked unaired episodes watched
-            if ($scope.hasAired($scope.seasonJson.episodes[episodeNum].air_date)) {
+            var episodeJson = $scope.seasonJson.episodes[episodeNum];
+            if ($scope.hasAired(episodeJson && episodeJson.air_date)) {
                 episode.watched = $scope.seasonWatched;
                 $scope.Changes.getEpisode(
                     $scope.seriesJson.id, 

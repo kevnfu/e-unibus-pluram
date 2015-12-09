@@ -54,6 +54,7 @@ Ratings.prototype = {
         var ctx = this;
         return this.$http.get("/account/rating", {cache:true})
             .then(function success(result) {
+                console.log("loaded ratings");
                 ctx.json = result.data;
                 return ctx.json;
             });

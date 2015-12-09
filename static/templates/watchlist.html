@@ -17,7 +17,7 @@
   <series-item ng-repeat="seriesRating in ratings" 
     mode="mode" series-rating="seriesRating"
     is-collapsed="collapseList[$index]"
-    index="{{$index}}"
+    index="{{::$index}}"
     on-toggle="collapseChanged(index)">
   </series-item>
 

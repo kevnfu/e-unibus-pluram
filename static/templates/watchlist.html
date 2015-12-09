@@ -18,7 +18,7 @@
     mode="mode" series-rating="::seriesRating"
     is-collapsed="collapseMap[seriesRating.id]"
     on-toggle="collapseChanged(id)"
-    ng-hide="seriesRating.name.toLowerCase().search(searchTermRegex)">
+    ng-hide="seriesRating.name.toLowerCase().match(searchTermRegex)">
   </series-item>
 
 </div>

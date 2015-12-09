@@ -79,10 +79,10 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
                 Ratings.initSeries(data);
                 updateUnwatchedUnairedCount();
                 // notify all children that ratings has been initialized
-                $timeout(function() {
-                    console.log("broadcasting ratings-ready");
-                    $scope.$broadcast("ratings-ready");
-                }, 1000);
+                // $timeout(function() {
+                //     console.log("broadcasting ratings-ready");
+                //     $scope.$broadcast("ratings-ready");
+                // }, 1000);
             });
 
             $scope.unwatchedEpisodes = 0; // episodes aired not yet watched
@@ -129,7 +129,10 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
 .controller("SeasonItemController", ["$scope",
     function SeasonEntryController($scope) {
     $scope.seasonWatched = false;
-    
+    // set initial state
+    $scope.seasonRating = $scope.seriesRating.seasons[$scope.seasonNum];
+    getSeasonWatched(); 
+
     function getSeasonWatched() {
         var watched = true;
         for (var episode in $scope.seasonRating.episodes) {
@@ -138,11 +141,11 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
         $scope.seasonWatched = watched;
     }
 
-    $scope.$on("ratings-ready", function() {
-        console.log("season received ratings-ready");
-        $scope.seasonRating = $scope.seriesRating.seasons[$scope.seasonNum];
-        getSeasonWatched(); 
-    });
+    // $scope.$on("ratings-ready", function() {
+    //     console.log("season received ratings-ready");
+    //     $scope.seasonRating = $scope.seriesRating.seasons[$scope.seasonNum];
+    //     getSeasonWatched(); 
+    // });
 
     $scope.$on("episode-watched-changed", function() {
         getSeasonWatched();
@@ -172,10 +175,11 @@ angular.module("app", ["ui.bootstrap", "ngAnimate",
 .controller("EpisodeItemController", ["$scope", function EpisodeEntryController($scope) {
     $scope.episodeRating = undefined;
     $scope.episodeNotAired = !$scope.hasAired($scope.episodeJson.air_date);
-    $scope.$on("ratings-ready", function() {
-        console.log("episode received ratings-ready");
-        $scope.episodeRating = $scope.seasonRating.episodes[$scope.episodeNum];
-    });
+    $scope.episodeRating = $scope.seasonRating.episodes[$scope.episodeNum];
+    // $scope.$on("ratings-ready", function() {
+    //     console.log("episode received ratings-ready");
+    //     $scope.episodeRating = $scope.seasonRating.episodes[$scope.episodeNum];
+    // });
 
     $scope.checkboxChanged = function() {
         $scope.Changes

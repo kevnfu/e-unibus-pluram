@@ -16,7 +16,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
         // convert ratings data (an object) into an array
         for (k in data) {
             $scope.data = data;
-            $scope.ratings.push(data[k]);    
+            $scope.ratings.push(data[k]);
         }
         // alphabetically
         $scope.ratings.sort(function(a,b) { return a.name.localeCompare(b.name); });
@@ -33,6 +33,10 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     $scope.$watch("searchTerm", function() {
         $scope.searchTermRegex = new RegExp(escapeRegExp($scope.searchTerm.toLowerCase()));
     });
+
+    $scope.notMatchSearch = function(name) {
+        return !name.toLowerCase().match($scope.searchTermRegex);
+    }
 
     $scope.collapseChanged = function(seriesId) {
         console.log("collapse changed " + seriesId);
@@ -84,7 +88,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
                 updateUnwatchedUnairedCount();
             });
 
-            $scope.unwatchedEpisodes = 0; // episodes aired not yet watched
+            $scope.unwatchedEpisodes = true; // seen all aired episodes
             $scope.unairedEpisodes = 0; // episodes not yet aired
             var updateUnwatchedUnairedCount = function() {
                 var unairedEpisodes = 0;

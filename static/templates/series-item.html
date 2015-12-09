@@ -13,13 +13,16 @@
         ng-change="checkboxChanged()" />
     </label></div>
     <div class="unwatched-label" 
-      ng-hide="unwatchedEpisodes===0">Unwatched episodes: {{unwatchedEpisodes}}</div>
+      ng-hide="unwatchedEpisodes===0">
+      Unwatched episodes: {{unwatchedEpisodes}}
+    </div>
     <div ng-show="(unwatchedEpisodes===0) && (unairedEpisodes!==0)">Unaired episodes: {{unairedEpisodes}}</div>
     <div ng-show="(unwatchedEpisodes===0) && (unairedEpisodes===0)">Seen all</div>
   </span>
 </div>
 
-<div class="row col-xs-12" uib-collapse="isCollapsed" ng-if="::!isCollapsed || undefined">
+<div class="row col-xs-12" uib-collapse="isCollapsed" 
+  ng-if="::!isCollapsed || undefined">
   <table class="table table-hover">
     <thead>
       <tr>
@@ -43,6 +46,7 @@
       
       <!-- episode items -->
       <tr class="table-entry" ng-controller="EpisodeItemController" 
+        ng-if="::!(seasonWatched && mode) || undefined"
         ng-hide="(mode && episodeRating.watched)"
         ng-repeat="(episodeNum, episodeJson) in ::seasonJson.episodes track by episodeNum">
         <td>S{{::seasonNum}}E{{::episodeNum}} {{::episodeJson.name}}</td>

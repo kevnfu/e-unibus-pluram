@@ -3,7 +3,7 @@
 angular.module("services", [])
 
 .constant("baseImgUrl", $('meta[name=img-url]').attr('content'))
-
+.constant("now", (new Date()).getTime())
 .service("Ratings", ["$http", Ratings])
 .service("Changes", ["$http", Changes])
 .factory("convertDate", [function() {
@@ -73,7 +73,8 @@ Ratings.prototype = {
                 }
             }
         }
-    }
+    },
+
 }
 
 function Changes($http) {

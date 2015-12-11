@@ -11,6 +11,10 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     $scope.ratings = [];
     $scope.collapseMap = {};
 
+    $scope.endOfList = function() {
+        console.log("at the end");
+    }
+
     // get ratings from server
     Ratings.get().then(function(data) {
         // convert ratings data (an object) into an array
@@ -30,6 +34,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     function escapeRegExp(str) {
       return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
     }
+
     $scope.$watch("searchTerm", function() {
         $scope.searchTermRegex = new RegExp(escapeRegExp($scope.searchTerm.toLowerCase()));
     });
@@ -201,7 +206,45 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             $scope.checkboxChanged();
         }
     }
+}])
+.directive("onBecomeVisible", ["$parse", "$window", function($parse, $window) {
+    // usage: on-become-visible="callback()"
+    // callback() is called when the element comes into view,
+    // that is, before the scroll or resize, it was not visible.
+    // once it becomes visible, callback is called.
+    // it will not call again until it leaves and then returns into view.
+    return {
+        restrict: "A",
+        link: function(scope, elem, attr) {
+            var callback = $parse(attr.onVisible);
+            
+            function isElementInViewport (el) {
+                //special bonus for those using jQuery
+                if (el instanceof jQuery) {
+                    el = el[0];
+                }
 
+                var rect = el.getBoundingClientRect();
+
+                return (
+                    rect.top >= 0 &&
+                    rect.left >= 0 &&
+                    rect.bottom <= $(window).height() &&
+                    rect.right <= $(window).width()
+                );
+            };
+
+            var oldVisible = isElementInViewport(elem);
+            angular.element($window).on('DOMContentLoaded load resize scroll', function() {
+                var newVisible = isElementInViewport(elem);
+                console.log("visibility " + newVisible);
+                if (oldVisible===false && newVisible === true) {
+                    callback(scope);
+                }
+                oldVisible = newVisible;
+            });
+        }
+    }
 }])
 
 })();

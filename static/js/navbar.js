@@ -1,6 +1,6 @@
 (function(){
 
-angular.module("navbar", [])
+angular.module("navbar", ["ngAnimate"])
 .value("userName", $('meta[name=user-name]').attr('content'))
 
 .filter("nospace", [function() {
@@ -12,21 +12,26 @@ angular.module("navbar", [])
     };
 }])
 
-.directive("navBar", function() {
+.directive("navBar", ["userName", function(userName) {
     return {
         restrict: "E",
         scope: {
             searchTerm: "="
         },
         templateUrl: "/static/templates/navbar.html",
-        controller: ["$scope", "userName", function($scope, userName) {
-            $scope.name = userName;
-            $scope.text = "";
-            $scope.getText = function() {
-                return $scope.text;
-            };
-        }]
+        link: function(scope) {
+            scope.name = userName;
+            scope.navbarCollapsed = true;
+        },
+        // controller: ["$scope", "userName", function($scope, userName) {
+        //     $scope.name = userName;
+        //     $scope.text = "";
+        //     $scope.navbarCollapsed = true;
+        //     $scope.getText = function() {
+        //         return $scope.text;
+        //     };
+        // }]
     };
-});
+}]);
 
 })();

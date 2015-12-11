@@ -6,6 +6,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     function ListController($scope, $http, $interval, Ratings, Changes) {
     $scope.mode = true; // set default mode true = watchlist.
     $scope.searchTerm = ""; // search term in navbar
+    $scope.seriesListVisible = true;
     
     // convert Ratings to a list ordered alphabetically by name
     $scope.ratings = [];
@@ -13,6 +14,11 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
 
     $scope.endOfList = function() {
         console.log("at the end");
+    }
+
+    $scope.navbarSubmit = function() {
+        console.log("navbar submit");
+
     }
 
     // get ratings from server
@@ -216,7 +222,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     return {
         restrict: "A",
         link: function(scope, elem, attr) {
-            var callback = $parse(attr.onVisible);
+            var callback = $parse(attr.onBecomeVisible);
             
             function isElementInViewport (el) {
                 //special bonus for those using jQuery

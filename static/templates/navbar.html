@@ -10,7 +10,7 @@
       </button>
       <a class="navbar-brand" href="/">Home</a>
 
-      <form class="navbar-form pull-left" role="search">
+      <form class="navbar-form pull-left" role="search" ng-submit="submit()">
         <div class="input-group">
           <input type="text" ng-model="searchTerm" class="form-control" placeholder="Search" />
           <div class="input-group-btn">
@@ -22,7 +22,7 @@
       </form>
     </div>
 
-    <div class="collapse navbar-collapse" collapse="navbarCollapsed">
+    <div class="collapse navbar-collapse" uib-collapse="navbarCollapsed">
       <ul class="nav navbar-nav navbar-right">
         <li><a href="">{{name | uppercase | nospace}}</a></li>
         <li class="hidden-xs"><p class="navbar-text">|</p></li>

@@ -16,21 +16,17 @@ angular.module("navbar", ["ngAnimate"])
     return {
         restrict: "E",
         scope: {
-            searchTerm: "="
+            searchTerm: "=",
+            submitCallback: "&onSubmit"
         },
         templateUrl: "/static/templates/navbar.html",
         link: function(scope) {
             scope.name = userName;
             scope.navbarCollapsed = true;
-        },
-        // controller: ["$scope", "userName", function($scope, userName) {
-        //     $scope.name = userName;
-        //     $scope.text = "";
-        //     $scope.navbarCollapsed = true;
-        //     $scope.getText = function() {
-        //         return $scope.text;
-        //     };
-        // }]
+            scope.submit = function() {
+                scope.submitCallback();
+            }
+        }
     };
 }]);
 

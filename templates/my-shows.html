@@ -7,11 +7,37 @@
 {% endblock %}
 
 {% block content %}
+{% raw %}
 <div ng-app="app" ng-controller="ListController">
-    <nav-bar search-term="searchTerm"></nav-bar>
+  <nav-bar on-submit="navbarSubmit()" search-term="searchTerm"></nav-bar>
 
-    <ng-include src="'static/templates/watchlist.html'"></ng-include>
+  <div class="container-fluid" ng-hide="!seriesListVisible">
+    <div class="row col-xs-12 text-center">
+      <h1>TV LIST</h1>
+    </div>
+    <div class="row col-xs-12 text-center" style="margin-bottom: 20px">
+      <div class="btn-group">
+        <label class="btn btn-default" ng-model="mode" uib-btn-radio="true">
+          Watchlist
+        </label>
+        <label class="btn btn-default" ng-model="mode" uib-btn-radio="false">
+          All Shows
+        </label>
+      </div>
+    </div>
+    <!-- Series list -->
+    <series-item ng-repeat="seriesRating in ratings track by seriesRating.id" 
+      mode="mode" series-rating="::seriesRating"
+      is-collapsed="collapseMap[seriesRating.id]"
+      on-toggle="collapseChanged(id)"
+      ng-hide="notMatchSearch(seriesRating.name)">
+    </series-item>
+
+    <div class="row col-xs-12" on-become-visible="endOfList()"></pre>
+  </div>
 </div>
+
+{% endraw %}
 {% endblock %}
 
 {% block scripts %}

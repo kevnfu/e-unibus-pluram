@@ -2,34 +2,26 @@
 
 angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     
-.controller("ListController", ["$scope", "$http", "$interval", "Ratings", "Changes", 
-    function ListController($scope, $http, $interval, Ratings, Changes) {
+.controller("ListController", ["$scope", "$interval", "$timeout", "Series", "Ratings", "Changes", 
+    function ListController($scope, $interval, $timeout, Series, Ratings, Changes) {
     $scope.mode = true; // set default mode true = watchlist.
     $scope.searchTerm = ""; // search term in navbar
+    $scope.searchQuery = undefined; // search term sent to <search-results/>
     $scope.seriesListVisible = true;
 
     // convert Ratings to a list ordered alphabetically by name
     $scope.ratings = [];
     $scope.collapseMap = {};
 
-    $scope.endOfList = function() {
-        console.log("at the end");
-    }
-
-    $scope.navbarSubmit = function() {
-        console.log("navbar submit");
-
-    }
-
     // get ratings from server
     Ratings.get().then(function(data) {
+        $scope.data = data;
         // convert ratings data (an object) into an array
         for (k in data) {
-            $scope.data = data;
             $scope.ratings.push(data[k]);
         }
         // alphabetically
-        $scope.ratings.sort(function(a,b) { return a.name.localeCompare(b.name); });
+        sortRatingsAlpha()
 
         // initialize collapseMap
         for (var i in $scope.ratings) {
@@ -37,21 +29,23 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             $scope.collapseMap[rating.id] = true;
         }
     });
+
+    function sortRatingsAlpha() {
+        $scope.ratings.sort(function(a,b) { return a.name.localeCompare(b.name); });
+    }
+
     function escapeRegExp(str) {
       return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
     }
-
+    $scope.matchSearch = function(name) {
+        return name.toLowerCase().match($scope.searchTermRegex);
+    }
     $scope.$watch("searchTerm", function() {
         $scope.searchTermRegex = new RegExp(escapeRegExp($scope.searchTerm.toLowerCase()));
     });
 
-    $scope.notMatchSearch = function(name) {
-        return !name.toLowerCase().match($scope.searchTermRegex);
-    }
-
     $scope.collapseChanged = function(seriesId) {
         console.log("collapse changed " + seriesId);
-        
         for (var id in $scope.collapseMap) {
             id = parseInt(id);
             if (id===seriesId) {
@@ -67,6 +61,48 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
         console.log("update interval cancelled");
         $interval.cancel(updatePromise);
     });
+
+    $scope.endOfList = function() {
+        console.log("at the end");
+    }
+    
+    // navbar stuff
+    $scope.searchResultsVisible = false;
+    $scope.navbarSubmit = function() {
+        if ($scope.searchTerm === "") {
+            return;
+        }
+        $scope.searchQuery = angular.copy($scope.searchTerm);
+        $scope.searchResultsVisible = true;
+        $scope.seriesListVisible = false;
+    }
+
+    $scope.addSeries = function(data) {
+        console.log("add series:" + data.name);
+        // search to see if id is in ratings
+        for (var k in $scope.ratings) {
+            if ($scope.ratings[k].id === data.id) {
+                console.log("already on watchlist");
+                $scope.searchResultsVisible = false;
+                $scope.seriesListVisible = true;
+                return;
+            }
+        }
+
+        Changes.getSeries(data.id).name = data.name;
+        Series.post(data.id)
+            .then(function success() {
+                var newSeries = Ratings.addSeries(data.id, data.name);
+                $scope.ratings.push(newSeries);
+                sortRatingsAlpha();
+                $scope.collapseMap[data.id] = true;
+            });
+        $timeout(function() {
+            $scope.searchResultsVisible = false;
+            $scope.seriesListVisible = true;
+            $scope.searchTerm = "";
+        }, 500);
+    }
 }])
 .directive("seriesItem", function() {
     return {
@@ -78,12 +114,11 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             isCollapsed: "=",
             onToggle: "&"
         },
-        // transclude: true,
         controller: ["$scope", "$uibModal", "Series", "Ratings", "Changes", "posterPath", "convertDate", 
             function SeriesItemController($scope, $uibModal, Series, Ratings, Changes, posterPath, convertDate) {
             $scope.basePosterUrl = posterPath(0);
-            console.log($scope.basePosterUrl);
             $scope.Changes = Changes;
+
             // $scope.isCollapsed = true; // set by parent
             $scope.seriesJson = {};
 
@@ -245,33 +280,106 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
                 );
             };
 
-            var oldVisible = isElementInViewport(elem);
+            // var oldVisible = isElementInViewport(elem);
+            // angular.element($window).on('DOMContentLoaded load resize scroll', function() {
+            //     var newVisible = isElementInViewport(elem);
+            //     if (oldVisible===false && newVisible === true) {
+            //         callback(scope);
+            //     }
+            //     oldVisible = newVisible;
+            // });
             angular.element($window).on('DOMContentLoaded load resize scroll', function() {
-                var newVisible = isElementInViewport(elem);
-                console.log("visibility " + newVisible);
-                if (oldVisible===false && newVisible === true) {
+                if (isElementInViewport(elem)) {
                     callback(scope);
                 }
-                oldVisible = newVisible;
             });
         }
     }
 }])
-.directive("searchResults", ["searchTv", function(searchTv) {
+.directive("searchResults", ["searchTv", "posterPath", function(searchTv, posterPath) {
     return {
         restrict: "E",
         scope: {
-            query: "@",
-            // addSeries: "&"
+            query: "=",
+            onSelectSeries: "&"
         },
-        template: "{{query}} : {{result}}",
+        templateUrl: "/static/templates/search-tv.html",
         link: function(scope, elem, attr) {
-            searchTv.get(scope.query)
-                .then(function(data) {
-                    scope.result=data;
-                })
-        }
+            scope.mouseover=false;
+            scope.basePosterUrl = posterPath(2);
+
+            function updateResults(page) {
+                searchTv.get(scope.query, page)
+                    .then(function(data) {
+                        if(!data.results){
+                            console.log("no results");
+                            return;
+                        }
+
+                        scope.totalPages = data.total_pages;
+                        console.log("page " + page + 
+                            " out of " + scope.totalPages);
+
+                        data = data.results;
+                        // filter out results w/o poster
+                        var i = data.length;
+                        while (i--) {
+                            if (data[i].poster_path==null) {
+                                data.splice(i,1);
+                            }
+                        }
+                        if (data===null) {
+                            return;
+                        }
+                        if (scope.page===1) {
+                            scope.results = data;
+                        } else {
+                            $.merge(scope.results, data);
+                        }})
+            }
+
+            scope.$watch("query", function() {
+                updateResults(1);
+                scope.page = 1;
+            })
+
+            scope.endOfList = function() {
+                if (scope.page < scope.totalPages) {
+                    updateResults(++scope.page);
+                }
+                if (scope.page < scope.totalPages) {
+                    updateResults(++scope.page);
+                }
+                if (scope.page < scope.totalPages) {
+                    updateResults(++scope.page);
+                }
+            }
+
+            scope.clicked = function(id, name) {
+                id = parseInt(id);
+                // only show clicked result
+                for (var i in scope.results) {
+                    if (scope.results[i].id === id) {
+                        scope.results = [scope.results[i]];
+                        break;
+                    }
+                }
+                scope.onSelectSeries()(scope.results[0]);
+            }
+        },
     };
+}])
+.directive("mouseoverImg", [function() {
+    return {
+        restrict: "E",
+        scope: {
+            src: "@"
+        },
+        template: '<img src="src" ng->',
+        link: function(scope, elem, attr) {
+
+        }
+    }
 }])
 
 })();

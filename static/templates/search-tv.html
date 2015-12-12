@@ -1,0 +1,27 @@
+<div class="row col-xs-12">
+  <h4>Add show</h4>
+</div>
+<div style="display:inline;position:relative;left:0;top:0"
+  ng-repeat="result in results"
+  ng-click="clicked(result.id, result.name)"
+  ng-mouseenter="style={'opacity':0.5}"
+  ng-mouseleave="style={}">
+  <img style="position:relative;left:0;top:0;margin:3px"
+    ng-style="style"
+    ng-src="{{result && (basePosterUrl + result.poster_path)}}"/>
+</div>
+
+<div on-become-visible="endOfList()">
+  <pre>
+    
+
+
+
+
+
+
+
+
+
+  </pre>
+</div>

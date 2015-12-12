@@ -178,6 +178,10 @@ class MainHandler(BaseHandler):
             series_list=series_list)
             
     def post(self):
+        if self.user is None:
+            self.error(401)
+            return
+
         # user clicked add to watchlist
         series_id = int(self.request.get('series_id'))
         series_name = self.request.get('series_name')
@@ -213,6 +217,10 @@ class AccountHandler(BaseHandler):
 
 class WatchedHandler(BaseHandler):
     def get(self):
+        if self.user is None:
+            self.error(401)
+            return
+
         self.render('my-shows.html', img_url=TmdbConfig.poster_path(0))
 
 class WatchlistHandler(BaseHandler):
@@ -259,18 +267,37 @@ class SeriesHandler(BaseHandler):
     Exposes json for a Series
     """
     def get(self, *a, **kw):
+        if self.user is None:
+            self.error(401)
+            return
+
         series_id = int(kw.get('id'))
 
         s = Series.get_by_id(series_id)
         if s:
-            
             self.render_json(s.to_json())
         else:
             self.render_json({})
 
+    def post(self, *a, **kw):
+        """
+        Server will add series to database
+        database.load_series is synchronous, so it can take a few seconds.
+        This is desirable to allow the user to know when 
+        the series has been copied from tmdb.
+        """
+        if self.user is None:
+            self.error(401)
+            return
+            
+        series_id = int(kw.get('id'))
+        database.load_series(series_id)
+            
+
 class RatingHandler(BaseHandler):
     def get(self):
         if self.user is None:
+            self.error(401)
             return
 
         ratings = UserRating.for_user(self.user)
@@ -278,6 +305,7 @@ class RatingHandler(BaseHandler):
 
     def post(self):
         if self.user is None:
+            self.error(401)
             return
 
         jDict = json.loads(self.request.body)
@@ -286,54 +314,13 @@ class RatingHandler(BaseHandler):
         ratings.update_all_series(jDict)
         ratings.put()
 
-
-    def watched(self, *a):
-        # """
-        # If request doesn't have episode number,
-        # this will mark entire season as watched.
-        # """
-        if self.user is None:
-            return
-
-        series_id = int(self.request.get('series_id'))
-        season_num = int(self.request.get('season_num'))
-        episode_num = int(self.request.get('episode_num'))
-
-        # if episode_num is None:
-
-        value = self.request.get('value') == 'true'
-
-        ratings = UserRating.for_user(self.user)
-        (ratings.get_series(series_id)
-            .get_season(season_num)
-            .get_episode(episode_num)
-            .watched) = value
-        ratings.put()
-
-    def tracking(self, *a):
-        if self.user is None:
-            return
-        series_id = int(self.request.get('series_id'))
-        value = self.request.get('value') == 'true'
-
-        ratings = UserRating.for_user(self.user)
-        ratings.get_series(series_id).tracking = value
-        ratings.put()
-
-class SearchHandler(BaseHandler):
-    def get(self, *a):
-        q = self.request.get('q', None)
-        if not q:
-            self.error(400)
-            return
-
+class SeriesRatingHandler(BaseHandler):
+    def post(self, *a, **kw):
         if self.user is None:
             self.error(401)
             return
 
-        # can't set x-forwarded-for headers in GAE
-        self.redirect(TMDB.search_tv_str(q));
-        return
+        series_id = int(kw.get('id'))
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
@@ -343,11 +330,7 @@ app = webapp2.WSGIApplication([
     ('/account/watchlist/?', WatchlistHandler),
     ('/account/watched/?', WatchedHandler),
     webapp2.Route(r'/series/<id:\d+><:/?>', handler=SeriesHandler),
-    webapp2.Route(r'/search/tv<:/?>', handler=SearchHandler),
     ('/account/rating/?', RatingHandler),
-    webapp2.Route(r'/account/rating/watched<:/?>', 
-        handler=RatingHandler, handler_method='watched'),
-    webapp2.Route(r'/account/rating/tracking<:/?>',
-        handler=RatingHandler, handler_method='tracking'),
+    webapp2.Route(r'/account/tv/<id:\d+><:/?>', handler=SeriesRatingHandler),
     (decorator.callback_path, decorator.callback_handler())
 ], debug=True)

@@ -12,7 +12,7 @@
 <div ng-app="app" ng-controller="ListController">
   <nav-bar on-submit="navbarSubmit()" search-term="searchTerm"></nav-bar>
 
-  <div class="container-fluid" ng-hide="!seriesListVisible">
+  <div class="container-fluid">
     <div class="row col-xs-12 text-center">
       <h1>TV LIST</h1>
     </div>
@@ -30,15 +30,16 @@
     <series-item ng-repeat="seriesRating in ratings track by seriesRating.id" 
       mode="mode" series-rating="::seriesRating"
       is-collapsed="collapseMap[seriesRating.id]"
-      on-toggle="collapseChanged(id)"
-      ng-hide="notMatchSearch(seriesRating.name)">
+      on-toggle="collapseChanged"
+      ng-hide="!matchSearch(seriesRating.name) || !seriesListVisible">
     </series-item>
 
-    <div class="row col-xs-12">
-      <search-results query="Game of Thrones"></search-results>
-    </div>
+    <search-results query="searchQuery"
+      on-select-series="addSeries" 
+      ng-show="searchResultsVisible">
+    </search-results>
 
-    <div class="row col-xs-12" on-become-visible="endOfList()"></pre>
+    <div class="row col-xs-12" on-become-visible="endOfList()"></div>
   </div>
 </div>
 

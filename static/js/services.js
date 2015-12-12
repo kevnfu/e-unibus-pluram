@@ -28,6 +28,12 @@ angular.module("services", [])
                     console.log("loaded series: " + seriesJson.id);
                     return parseAiredDates(seriesJson, convertDate);
                 });
+        },
+        post: function(id) {
+            return $http.post("/series/" + id, {})
+                .then(function success() {
+                    console.log("posted series: " + id);
+                });
         }
     };
 }])
@@ -35,10 +41,11 @@ angular.module("services", [])
     var searchStr = 'http://api.themoviedb.org/3/search/tv?api_key=' 
         + tmdbKey +"&query=";
     return {
-        get: function(title) {
-            return $http.get(searchStr + encodeURI(title))
+        get: function(title, page) {
+            page = page || 1;
+            return $http.get(
+                searchStr + encodeURI(title) + "&page=" + page)
                 .then(function success(result) {
-                    console.log("loaded search result: " + title);
                     return result.data;
                 });
         }
@@ -92,6 +99,12 @@ Ratings.prototype = {
             }
         }
     },
+    addSeries: function(id, name) {
+        var newSeries = {'id':id, 'name':name, 
+            'tracking':true, 'rating':0, 'seasons': {}};
+        this.json[id] = newSeries;
+        return newSeries;
+    }
 
 }
 

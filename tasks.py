@@ -9,13 +9,7 @@ class TaskHandler(webapp2.RequestHandler):
     def load_series(self):
         series_id = self.request.get('series_id')
 
-        #check if already in database
-        series = Series.get_by_id(series_id)
-        if series is not None:
-            logging.info("Tried to re-add series %d" % series_id)
-            return
-        else:
-            database.load_series(series_id)
+        database.load_series(series_id)
 
 
     @staticmethod

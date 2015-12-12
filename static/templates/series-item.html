@@ -1,6 +1,6 @@
 <div class="row col-xs-12 series-item" 
   ng-hide="mode && (!seriesRating.tracking || seenAll())">
-  <span ng-click="onToggle({id:seriesJson.id})" class="pull-left">
+  <span ng-click="onToggle()(seriesJson.id)" class="pull-left">
     <span class="glyphicon" ng-class="{'glyphicon-triangle-right':isCollapsed, 'glyphicon-triangle-bottom':!isCollapsed}"></span>
     <img class="series-image" alt="{{::seriesJson.name}} Poster"
       ng-src="{{::basePosterUrl}}{{::seriesJson.poster_path}}" />

@@ -375,7 +375,10 @@ class UserRating(ndb.Model):
         Changes is a json object
         """
         for series_id, series_changes in changes.items():
-            series = self.get_series(series_id) # should never be None
+            series = self.get_series(series_id)
+            if series is None:
+                series = self.set_series(series_id, series_changes.get("name"))
+
             series.changes(series_changes)
 
 class TmdbConfig(ndb.Model):
@@ -437,7 +440,11 @@ class database:
         """
         Loads series, season, episode into db.
         """
-        # TODO: handle None errors.
+        #check if already in database
+        series = Series.get_by_id(series_id)
+        if series is not None:
+            logging.info("Tried to re-add series %d" % series_id)
+            return False
 
         # fetch from TMDB
         series_json = TMDB.series(series_id)
@@ -448,7 +455,6 @@ class database:
             season = Season.from_json(season_json)
             series.set_season(season)
 
-        # store
         series.put()
         return True
 

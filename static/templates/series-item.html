@@ -23,7 +23,7 @@
   </span>
 </div>
 
-<div class="row col-xs-12" uib-collapse="isCollapsed" 
+<div class="row col-xs-12" uib-collapse="isCollapsed || (seenAll() && mode)" 
   ng-if="::!isCollapsed || undefined">
   <table class="table table-hover">
     <thead>

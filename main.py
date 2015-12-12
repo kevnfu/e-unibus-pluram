@@ -289,7 +289,7 @@ class SeriesHandler(BaseHandler):
         if self.user is None:
             self.error(401)
             return
-            
+
         series_id = int(kw.get('id'))
         database.load_series(series_id)
             
@@ -314,14 +314,6 @@ class RatingHandler(BaseHandler):
         ratings.update_all_series(jDict)
         ratings.put()
 
-class SeriesRatingHandler(BaseHandler):
-    def post(self, *a, **kw):
-        if self.user is None:
-            self.error(401)
-            return
-
-        series_id = int(kw.get('id'))
-
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/login/?', LoginHandler),
@@ -331,6 +323,5 @@ app = webapp2.WSGIApplication([
     ('/account/watched/?', WatchedHandler),
     webapp2.Route(r'/series/<id:\d+><:/?>', handler=SeriesHandler),
     ('/account/rating/?', RatingHandler),
-    webapp2.Route(r'/account/tv/<id:\d+><:/?>', handler=SeriesRatingHandler),
     (decorator.callback_path, decorator.callback_handler())
 ], debug=True)

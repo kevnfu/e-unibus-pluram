@@ -90,13 +90,12 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
         }
 
         Changes.getSeries(data.id).name = data.name;
-        Series.post(data.id)
-            .then(function success() {
-                var newSeries = Ratings.addSeries(data.id, data.name);
-                $scope.ratings.push(newSeries);
-                sortRatingsAlpha();
-                $scope.collapseMap[data.id] = true;
-            });
+        Series.post(data.id).then(function success() {
+            var newSeries = Ratings.addSeries(data.id, data.name);
+            $scope.ratings.push(newSeries);
+            sortRatingsAlpha();
+            $scope.collapseMap[data.id] = true;
+        });
         $timeout(function() {
             $scope.searchResultsVisible = false;
             $scope.seriesListVisible = true;

@@ -359,6 +359,7 @@ class UserRating(ndb.Model):
     #     self.movie_ratings[movie_rating.id] = movie_rating
 
     def set_series(self, series_id, series_name):
+        series_id = int(series_id)
         series = SeriesRating(series_id, series_name)
         self.series_ratings[series_id] = series
         return series

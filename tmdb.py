@@ -47,16 +47,20 @@ class TMDB:
             return None
         data = json.loads(r.content)
         return data
-
+    
     @classmethod
-    def search_tv(cls, title):
-        # TODO: deal w/ multiple pages
+    def search_tv_str(cls, title):
         title = cgi_space_escape(title)
         url = BASE_URL + "/search/tv?api_key={key}&query={title}" 
         url = url.format(title=title, key=API_KEY)
+        return url
+
+    @classmethod
+    def search_tv(cls, title):
+        url = cls.search_tv_str(title)
         resp_json = cls.fetch_json(url)
         return resp_json.get('results')
-        
+
     @classmethod
     def series(cls, series_id):
         url = (BASE_URL + 

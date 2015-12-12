@@ -30,6 +30,7 @@ from webapp2_extras import routes
 from database import *
 from utilities import *
 from tasks import TaskHandler
+from tmdb import API_KEY as TMDB_KEY
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
@@ -65,7 +66,7 @@ class BaseHandler(webapp2.RequestHandler):
 
     def render_json(self, d):
         self.response.headers['Content-Type'] = 'application/json; charset=UTF-8'
-        self.response.headers['Access-Control-Allow-Origin'] = '*'
+        # self.response.headers['Access-Control-Allow-Origin'] = '*'
         self.write(json.dumps(d))
 
     def render_pp_json(self, d):
@@ -155,7 +156,7 @@ class MainHandler(BaseHandler):
     def get(self):
         # render search results
         q = self.request.get('q', None)
-        if q is None:
+        if not q:
             self.render('front.html', user=self.user)
             return
 
@@ -199,9 +200,16 @@ class AccountHandler(BaseHandler):
             self.redirect("/")
             return
 
+        poster_path_str = ""
+        for i in range(7):
+            poster_path_str += TmdbConfig.poster_path(i) + " "
+
+        poster_path_str = poster_path_str.rstrip(" ")
+
         self.render('my-shows.html', 
-            img_url=TmdbConfig.poster_path(0), 
-            name=self.user.name)
+            poster_paths=poster_path_str, 
+            name=self.user.name,
+            api_key=TMDB_KEY)
 
 class WatchedHandler(BaseHandler):
     def get(self):
@@ -312,6 +320,20 @@ class RatingHandler(BaseHandler):
         ratings.get_series(series_id).tracking = value
         ratings.put()
 
+class SearchHandler(BaseHandler):
+    def get(self, *a):
+        q = self.request.get('q', None)
+        if not q:
+            self.error(400)
+            return
+
+        if self.user is None:
+            self.error(401)
+            return
+
+        # can't set x-forwarded-for headers in GAE
+        self.redirect(TMDB.search_tv_str(q));
+        return
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
@@ -321,6 +343,7 @@ app = webapp2.WSGIApplication([
     ('/account/watchlist/?', WatchlistHandler),
     ('/account/watched/?', WatchedHandler),
     webapp2.Route(r'/series/<id:\d+><:/?>', handler=SeriesHandler),
+    webapp2.Route(r'/search/tv<:/?>', handler=SearchHandler),
     ('/account/rating/?', RatingHandler),
     webapp2.Route(r'/account/rating/watched<:/?>', 
         handler=RatingHandler, handler_method='watched'),

@@ -7,7 +7,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     $scope.mode = true; // set default mode true = watchlist.
     $scope.searchTerm = ""; // search term in navbar
     $scope.seriesListVisible = true;
-    
+
     // convert Ratings to a list ordered alphabetically by name
     $scope.ratings = [];
     $scope.collapseMap = {};
@@ -79,9 +79,10 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             onToggle: "&"
         },
         // transclude: true,
-        controller: ["$scope", "Series", "Ratings", "Changes", "baseImgUrl", "convertDate", 
-            function SeriesItemController($scope, Series, Ratings, Changes, baseImgUrl, convertDate) {
-            $scope.baseImgUrl = baseImgUrl;
+        controller: ["$scope", "$uibModal", "Series", "Ratings", "Changes", "posterPath", "convertDate", 
+            function SeriesItemController($scope, $uibModal, Series, Ratings, Changes, posterPath, convertDate) {
+            $scope.basePosterUrl = posterPath(0);
+            console.log($scope.basePosterUrl);
             $scope.Changes = Changes;
             // $scope.isCollapsed = true; // set by parent
             $scope.seriesJson = {};
@@ -91,6 +92,10 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
                 if(!otherDate) return false;
                 return otherDate.getTime() < now.getTime();
             };
+
+            $scope.seenAll = function() {
+                return ($scope.unwatchedEpisodes===0) && ($scope.unairedEpisodes===0);
+            }
 
             Series.get($scope.seriesRating.id).then(function success(data){
                 console.log()
@@ -251,6 +256,22 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             });
         }
     }
+}])
+.directive("searchResults", ["searchTv", function(searchTv) {
+    return {
+        restrict: "E",
+        scope: {
+            query: "@",
+            // addSeries: "&"
+        },
+        template: "{{query}} : {{result}}",
+        link: function(scope, elem, attr) {
+            searchTv.get(scope.query)
+                .then(function(data) {
+                    scope.result=data;
+                })
+        }
+    };
 }])
 
 })();

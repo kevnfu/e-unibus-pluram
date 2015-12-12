@@ -1,9 +1,9 @@
 <div class="row col-xs-12 series-item" 
-  ng-hide="(mode && !seriesRating.tracking)">
+  ng-hide="mode && (!seriesRating.tracking || seenAll())">
   <span ng-click="onToggle({id:seriesJson.id})" class="pull-left">
     <span class="glyphicon" ng-class="{'glyphicon-triangle-right':isCollapsed, 'glyphicon-triangle-bottom':!isCollapsed}"></span>
     <img class="series-image" alt="{{::seriesJson.name}} Poster"
-      ng-src="{{::baseImgUrl}}{{::seriesJson.poster_path}}" />
+      ng-src="{{::basePosterUrl}}{{::seriesJson.poster_path}}" />
   </span>
   <span>
     <a href=""><h4>{{::seriesJson.name}}</h4></a>
@@ -16,13 +16,15 @@
       ng-hide="unwatchedEpisodes===0">
       Unwatched episodes: {{unwatchedEpisodes}}
     </div>
-    <div ng-show="(unwatchedEpisodes===0) && (unairedEpisodes!==0)">Unaired episodes: {{unairedEpisodes}}</div>
-    <div ng-show="(unwatchedEpisodes===0) && (unairedEpisodes===0)">Seen all</div>
+    <div ng-show="(unwatchedEpisodes===0) && (unairedEpisodes!==0)">
+      Unaired episodes: {{unairedEpisodes}}
+    </div>
+    <div ng-show="seenAll()">Seen all</div>
   </span>
 </div>
 
 <div class="row col-xs-12" uib-collapse="isCollapsed" 
-  ng-if="!isCollapsed">
+  ng-if="::!isCollapsed || undefined">
   <table class="table table-hover">
     <thead>
       <tr>

@@ -1,11 +1,16 @@
 (function() {
 
 angular.module("services", [])
-
-.constant("baseImgUrl", $('meta[name=img-url]').attr('content'))
 .constant("now", (new Date()).getTime())
+.constant("tmdbKey", $('meta[name=tmdb-key]').attr('content'))
 .service("Ratings", ["$http", Ratings])
 .service("Changes", ["$http", Changes])
+.factory("posterPath", function() {
+    var posterPaths = $('meta[name=poster-paths]').attr('content').split(" ");
+    return function(size) {
+        return posterPaths[size];
+    }
+})
 .factory("convertDate", [function() {
     return function(dateStr) {
         // format is YYYY-MM-DD
@@ -25,7 +30,20 @@ angular.module("services", [])
                 });
         }
     };
-}]);
+}])
+.factory("searchTv", ["$http", "tmdbKey", function($http, tmdbKey) {
+    var searchStr = 'http://api.themoviedb.org/3/search/tv?api_key=' 
+        + tmdbKey +"&query=";
+    return {
+        get: function(title) {
+            return $http.get(searchStr + encodeURI(title))
+                .then(function success(result) {
+                    console.log("loaded search result: " + title);
+                    return result.data;
+                });
+        }
+    };
+}])
 
 function parseAiredDates(seriesJson, convertDate) {
     //convert all aired dates to dates

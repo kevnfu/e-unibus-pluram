@@ -24,6 +24,11 @@ body { padding-top: 70px; }
     box-shadow: none;
 }
 
+
+[ng\:cloak], [ng-cloak], .ng-cloak {
+  display: none !important;
+}
+
 /* how <a> tags appear */
 .submit_link{
     background: none;

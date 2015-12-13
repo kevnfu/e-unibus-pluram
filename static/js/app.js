@@ -8,6 +8,11 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     $scope.searchTerm = ""; // search term in navbar
     $scope.searchQuery = undefined; // search term sent to <search-results/>
     $scope.seriesListVisible = true;
+    $scope.alerts = [];
+
+    $scope.closeAlert = function(index) {
+        $scope.alerts.splice(index, 1);
+    }
 
     // convert Ratings to a list ordered alphabetically by name
     $scope.ratings = [];
@@ -78,24 +83,25 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     }
 
     $scope.addSeries = function(data) {
-        console.log("add series:" + data.name);
-        // search to see if id is in ratings
-        for (var k in $scope.ratings) {
-            if ($scope.ratings[k].id === data.id) {
-                console.log("already on watchlist");
-                $scope.searchResultsVisible = false;
-                $scope.seriesListVisible = true;
-                return;
-            }
+        console.log(data && ("add series:" + data.id));
+        if (!data) {
+            $scope.searchResultsVisible = false;
+            $scope.seriesListVisible = true;
+            $scope.searchTerm = "";
+            return;
+        } else if (data.id in Ratings.json) {
+            $scope.alerts.push(
+                {type:"warning", msg:"Already added.", time:5000})
+        } else {
+            Changes.getSeries(data.id).name = data.name;
+            Series.post(data.id).then(function success() {
+                var newSeries = Ratings.addSeries(data.id, data.name);
+                $scope.ratings.push(newSeries);
+                sortRatingsAlpha();
+                $scope.collapseMap[data.id] = true;
+            });
         }
 
-        Changes.getSeries(data.id).name = data.name;
-        Series.post(data.id).then(function success() {
-            var newSeries = Ratings.addSeries(data.id, data.name);
-            $scope.ratings.push(newSeries);
-            sortRatingsAlpha();
-            $scope.collapseMap[data.id] = true;
-        });
         $timeout(function() {
             $scope.searchResultsVisible = false;
             $scope.seriesListVisible = true;
@@ -306,6 +312,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
         link: function(scope, elem, attr) {
             scope.mouseover=false;
             scope.basePosterUrl = posterPath(2);
+            scope.active = true;
 
             function updateResults(page) {
                 searchTv.get(scope.query, page)
@@ -338,11 +345,20 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             }
 
             scope.$watch("query", function() {
-                updateResults(1);
-                scope.page = 1;
+                scope.results = [];
+                scope.page = 0;
+                scope.active = true;
+                updateResults(++scope.page);
+                if (scope.page < scope.totalPages) {
+                    updateResults(++scope.page);
+                }
+                if (scope.page < scope.totalPages) {
+                    updateResults(++scope.page);
+                }
             })
 
             scope.endOfList = function() {
+                if (!scope.active) return;
                 if (scope.page < scope.totalPages) {
                     updateResults(++scope.page);
                 }
@@ -354,7 +370,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
                 }
             }
 
-            scope.clicked = function(id, name) {
+            scope.selected = function(id, name) {
                 id = parseInt(id);
                 // only show clicked result
                 for (var i in scope.results) {
@@ -364,6 +380,12 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
                     }
                 }
                 scope.onSelectSeries()(scope.results[0]);
+                scope.active = false;
+            }
+
+            scope.cancel = function() {
+                scope.onSelectSeries()();
+                scope.active = false;
             }
         },
     };

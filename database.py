@@ -449,10 +449,15 @@ class database:
 
         # fetch from TMDB
         series_json = TMDB.series(series_id)
+        if not series_json:
+            return False;
+
         series = Series.from_json(series_json)
 
         for i in range(1, series.number_of_seasons() + 1):
             season_json = TMDB.season(series_id, season_number=i)
+            if not season_json:
+                continue
             season = Season.from_json(season_json)
             series.set_season(season)
 

@@ -26,6 +26,13 @@
         </label>
       </div>
     </div>
+    <div class="row col-xs-12">
+      <uib-alert ng-repeat="alert in alerts" 
+        type="{{alert.type}}" 
+        dismiss-on-timeout="{{alert.time}}"
+        close="closeAlert($index)" ng-cloak>{{alert.msg}}</uib-alert>
+    </div>
+
     <!-- Series list -->
     <series-item ng-repeat="seriesRating in ratings track by seriesRating.id" 
       mode="mode" series-rating="::seriesRating"
@@ -36,7 +43,7 @@
 
     <search-results query="searchQuery"
       on-select-series="addSeries" 
-      ng-show="searchResultsVisible">
+      ng-if="searchResultsVisible">
     </search-results>
 
     <div class="row col-xs-12" on-become-visible="endOfList()"></div>

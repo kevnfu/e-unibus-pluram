@@ -90,10 +90,19 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             $scope.searchTerm = "";
             return;
         } else if (data.id in Ratings.json) {
-            $scope.alerts.push(
-                {type:"warning", msg:"Already added.", time:5000})
+            $scope.alerts.push({
+                type:"warning", 
+                msg:"Already added.", 
+                time:2000
+            })
         } else {
             Changes.getSeries(data.id).name = data.name;
+            $scope.alerts.push({
+                type:"success",
+                msg:"Series added.",
+                time:2000
+            })
+            // tell server to load series
             Series.post(data.id).then(function success() {
                 var newSeries = Ratings.addSeries(data.id, data.name);
                 $scope.ratings.push(newSeries);

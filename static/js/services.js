@@ -126,13 +126,13 @@ Ratings.prototype = {
     },
     search: function(query) {
         // given a query, returns a rating whose name matches query
+        // matches the beginning of words.
         // if no rating is found, returns undefined.
         if (!query) return;
 
-        query = new RegExp(this.escapeRegExp(query.toLowerCase()));
+        query = new RegExp("\\b" + this.escapeRegExp(query), "gi");
         for (rating of this.list) {
-            var name = rating.name.toLowerCase();
-            if(name.match(query)) {
+            if(rating.name.match(query)) {
                 return rating;
                 break;
             }

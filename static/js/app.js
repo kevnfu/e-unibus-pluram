@@ -2,42 +2,29 @@
 
 angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     
-.controller("ListController", ["$scope", "$interval", "$timeout", "Series", "Ratings", "Changes", 
-    function ListController($scope, $interval, $timeout, Series, Ratings, Changes) {
+.controller("ListController", ["$scope", "$timeout", "Series", "Ratings", "Changes", 
+    function ListController($scope, $timeout, Series, Ratings, Changes) {
     $scope.mode = true; // set default mode true = watchlist.
     $scope.searchTerm = ""; // search term in navbar
     $scope.searchQuery = undefined; // search term sent to <search-results/>
     $scope.seriesListVisible = true;
     $scope.alerts = [];
+    $scope.Ratings = Ratings;
 
     $scope.closeAlert = function(index) {
         $scope.alerts.splice(index, 1);
     }
 
-    // convert Ratings to a list ordered alphabetically by name
-    $scope.ratings = [];
-    $scope.collapseMap = {};
-
     // get ratings from server
     Ratings.get().then(function(data) {
-        $scope.data = data;
-        // convert ratings data (an object) into an array
-        for (k in data) {
-            $scope.ratings.push(data[k]);
-        }
         // alphabetically
-        sortRatingsAlpha()
+        Ratings.sortAlpha();
 
-        // initialize collapseMap
-        for (var i in $scope.ratings) {
-            var rating = $scope.ratings[i];
-            $scope.collapseMap[rating.id] = true;
-        }
+        // initialize collapse
+        for (var rating of Ratings.list) {
+            rating.collapsed = true;
+        };
     });
-
-    function sortRatingsAlpha() {
-        $scope.ratings.sort(function(a,b) { return a.name.localeCompare(b.name); });
-    }
 
     function escapeRegExp(str) {
       return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
@@ -50,17 +37,15 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
     });
 
     $scope.collapseChanged = function(seriesId) {
-        console.log("collapse changed " + seriesId);
-        for (var id in $scope.collapseMap) {
-            id = parseInt(id);
-            if (id===seriesId) {
-                 $scope.collapseMap[id] = !$scope.collapseMap[id];
+        for (var rating of Ratings.list) {
+            if (rating.id===seriesId) {
+                 rating.collapsed = !rating.collapsed;
             } else {
-                $scope.collapseMap[id] = true;
+                rating.collapsed = true;
             }
         }
     };
-    
+
     $scope.endOfList = function() {
         console.log("at the end");
     }
@@ -98,10 +83,9 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             })
             // tell server to load series
             Series.post(data.id).then(function success() {
-                var newSeries = Ratings.addSeries(data.id, data.name);
-                $scope.ratings.push(newSeries);
-                sortRatingsAlpha();
-                $scope.collapseMap[data.id] = true;
+                var newRating = Ratings.addSeries(data.id, data.name);
+                newRating.collapsed = true;
+                Ratings.sortAlpha();
             });
         }
 
@@ -137,7 +121,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             };
 
             $scope.seenAll = function() {
-                return ($scope.unwatchedEpisodes===0) && ($scope.unairedEpisodes===0);
+                return ($scope.unwatchedEpisodes===0) && ($scope.nextAirDate === undefined);
             }
 
             Series.get($scope.seriesRating.id).then(function success(data){
@@ -147,11 +131,11 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
                 updateUnwatchedUnairedCount();
             });
 
-            $scope.unwatchedEpisodes = true; // seen all aired episodes
-            $scope.unairedEpisodes = 0; // episodes not yet aired
+            $scope.unwatchedEpisodes = 0; // seen all aired episodes
+            $scope.nextAirDate = undefined; // no unaired episodes
             var updateUnwatchedUnairedCount = function() {
-                var unairedEpisodes = 0;
                 var unwatchedEpisodes = 0;
+                var nextAirDate = undefined;
                 var seasonsJson = $scope.seriesJson.seasons;
                 for (var seasonNum in seasonsJson) {
                     var episodesJson = seasonsJson[seasonNum].episodes;
@@ -163,13 +147,14 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
                             if($scope.hasAired(episodeJson.air_date)) {
                                 unwatchedEpisodes++;
                             } else {
-                                unairedEpisodes++;
+                                nextAirDate = episodeJson.air_date;
+                                break;
                             };
                         };
                     }
                 }
                 $scope.unwatchedEpisodes = unwatchedEpisodes;
-                $scope.unairedEpisodes = unairedEpisodes;
+                $scope.nextAirDate = nextAirDate;
             }
             
             // event listeners

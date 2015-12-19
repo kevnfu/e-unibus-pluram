@@ -34,9 +34,9 @@
     </div>
 
     <!-- Series list -->
-    <series-item ng-repeat="seriesRating in ratings track by seriesRating.id" 
+    <series-item ng-repeat="seriesRating in Ratings.list track by seriesRating.id" 
       mode="mode" series-rating="::seriesRating"
-      is-collapsed="collapseMap[seriesRating.id]"
+      is-collapsed="seriesRating.collapsed"
       on-toggle="collapseChanged"
       ng-hide="!matchSearch(seriesRating.name) || !seriesListVisible">
     </series-item>

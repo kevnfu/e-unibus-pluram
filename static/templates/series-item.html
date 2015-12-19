@@ -16,8 +16,8 @@
       ng-hide="unwatchedEpisodes===0">
       Unwatched episodes: {{unwatchedEpisodes}}
     </div>
-    <div ng-show="(unwatchedEpisodes===0) && (unairedEpisodes!==0)">
-      Unaired episodes: {{unairedEpisodes}}
+    <div ng-show="(unwatchedEpisodes===0) && nextAirDate">
+      Next episode: {{nextAirDate | date:'shortDate'}}
     </div>
     <div ng-show="seenAll()">Seen all</div>
   </span>

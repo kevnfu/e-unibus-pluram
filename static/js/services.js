@@ -72,6 +72,7 @@ function parseAiredDates(seriesJson, convertDate) {
 function Ratings($http) {
     this.$http = $http;
     this.json = {};
+    this.list = [];
     this.changes = new Changes($http);
 };
 Ratings.prototype = {
@@ -81,8 +82,16 @@ Ratings.prototype = {
             .then(function success(result) {
                 console.log("loaded ratings");
                 ctx.json = result.data;
-                return ctx.json;
+                for (k in ctx.json) {
+                    ctx.list.push(ctx.json[k]);
+                }
+                return ctx.list;
             });
+    },
+    sortAlpha : function() {
+        this.list.sort(function(a,b) { 
+            return a.name.localeCompare(b.name); 
+        });
     },
     initSeries: function(json) {
         // since new episodes could've been added to series, need to
@@ -103,7 +112,11 @@ Ratings.prototype = {
         var newSeries = {'id':id, 'name':name, 
             'tracking':true, 'rating':0, 'seasons': {}};
         this.json[id] = newSeries;
+        this.list.push(newSeries);
         return newSeries;
+    },
+    getSeries: function(id) {
+        return this.json[id];
     }
 
 }

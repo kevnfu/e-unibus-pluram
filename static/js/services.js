@@ -4,7 +4,7 @@ angular.module("services", [])
 .constant("now", (new Date()).getTime())
 .constant("tmdbKey", $('meta[name=tmdb-key]').attr('content'))
 .service("Ratings", ["$http", Ratings])
-.service("Changes", ["$http", Changes])
+.service("Changes", ["$http", "$timeout", Changes])
 .factory("posterPath", function() {
     var posterPaths = $('meta[name=poster-paths]').attr('content').split(" ");
     return function(size) {
@@ -108,23 +108,28 @@ Ratings.prototype = {
 
 }
 
-function Changes($http) {
+function Changes($http, $timeout) {
     this.$http = $http;
+    this.$timeout = $timeout;
     this.json = {};
+    this.promise = undefined;
 };
 Changes.prototype = {
     getSeries: function(series) {
+        this.notify();
         return seriesChanges = this.json[series] 
             || (this.json[series] = {
                 // 'name':seriesList.seriesItem(series).name(), 
                 'seasons':{}});
     },
     getSeason: function(series, season) {
+        this.notify();
         var seriesChanges = this.getSeries(series);
         return seriesChanges.seasons[season] 
             || (seriesChanges.seasons[season] = {'episodes':{}});
     },
     getEpisode: function(series, season, episode) {
+        this.notify();
         var seasonChanges = this.getSeason(series, season);
         return seasonChanges.episodes[episode] 
             || (seasonChanges.episodes[episode] = {});
@@ -157,6 +162,17 @@ Changes.prototype = {
             });
         };
     },
+    notify: function() {
+        // tells changes that changes have been made, it will wait 2s
+        // to see if there's new data, then it will send.
+        if (this.promise) {
+            this.$timeout.cancel(this.promise);
+        };
+        var ctx = this;
+        this.promise = this.$timeout(function() {
+            ctx.post();
+        }, 2000);
+    }
 };
 
 

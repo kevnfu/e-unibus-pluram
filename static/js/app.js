@@ -60,13 +60,7 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
             }
         }
     };
-
-    var updatePromise = $interval(function(){ Changes.post(); }, 2000);
-    $scope.$on('$destroy', function() {
-        console.log("update interval cancelled");
-        $interval.cancel(updatePromise);
-    });
-
+    
     $scope.endOfList = function() {
         console.log("at the end");
     }

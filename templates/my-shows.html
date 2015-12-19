@@ -35,12 +35,14 @@
 
     <!-- Series list -->
     <div ng-show="seriesListVisible">
-    <series-item ng-repeat="seriesRating in Ratings.list track by seriesRating.id" 
-      mode="mode" series-rating="::seriesRating"
-      is-collapsed="seriesRating.collapsed"
-      on-toggle="collapseChanged">
-      <!-- ng-hide="!matchSearch(seriesRating.name) || !seriesListVisible"> -->
-    </series-item>
+      <series-item ng-repeat="seriesRating in Ratings.list track by seriesRating.id" 
+        mode="mode" series-rating="::seriesRating"
+        is-collapsed="seriesRating.collapsed"
+        on-toggle="collapseChanged">
+        <!-- ng-hide="!matchSearch(seriesRating.name)> -->
+      </series-item>
+      
+      <div class="row col-xs-12" on-become-visible="endOfList()"></div>
     </div>
 
     <search-results query="searchQuery"
@@ -48,7 +50,6 @@
       ng-if="searchResultsVisible">
     </search-results>
 
-    <div class="row col-xs-12" on-become-visible="endOfList()"></div>
   </div>
 </div>
 
@@ -58,5 +59,6 @@
 {% block scripts %}
 <script src="/static/js/app.js"></script>
 <script src="/static/js/services.js"></script>
+<script src="/static/js/directives.js"></script>
 <script src="/static/js/navbar.js"></script>
 {% endblock %}

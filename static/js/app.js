@@ -2,8 +2,8 @@
 
 angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "directives", "navbar"])
     
-.controller("ListController", ["$scope", "$timeout", "$location", "$anchorScroll", "Series", "Ratings", "Changes", 
-    function ListController($scope, $timeout, $location, $anchorScroll, Series, Ratings, Changes) {
+.controller("ListController", ["$scope", "$timeout", "Series", "Ratings", "Changes", 
+    function ListController($scope, $timeout, Series, Ratings, Changes) {
     $scope.mode = true; // set default mode true = watchlist.
     $scope.searchTerm = ""; // search term in navbar
     $scope.searchQuery = undefined; // search term sent to <search-results/>
@@ -110,7 +110,6 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "directives", "n
             function SeriesItemController($scope, $uibModal, Series, Ratings, Changes, posterPath, convertDate) {
             $scope.basePosterUrl = posterPath(0);
             $scope.Changes = Changes;
-
             // $scope.isCollapsed = true; // set by parent
             $scope.seriesJson = {};
 

@@ -126,13 +126,12 @@ Ratings.prototype = {
     },
     search: function(query) {
         // given a query, returns a rating whose name matches query
-        // ignores leading "the"
         // if no rating is found, returns undefined.
         if (!query) return;
 
         query = new RegExp(this.escapeRegExp(query.toLowerCase()));
         for (rating of this.list) {
-            var name = rating.name.replace(this.the, "").toLowerCase();
+            var name = rating.name.toLowerCase();
             if(name.match(query)) {
                 return rating;
                 break;

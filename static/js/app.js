@@ -33,6 +33,9 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "navbar"])
         return name.toLowerCase().match($scope.searchTermRegex);
     }
     $scope.$watch("searchTerm", function() {
+        // for (var rating of Ratings.list) {
+        //     rating.name
+        // }
         $scope.searchTermRegex = new RegExp(escapeRegExp($scope.searchTerm.toLowerCase()));
     });
 

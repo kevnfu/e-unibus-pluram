@@ -34,12 +34,14 @@
     </div>
 
     <!-- Series list -->
+    <div ng-show="seriesListVisible">
     <series-item ng-repeat="seriesRating in Ratings.list track by seriesRating.id" 
       mode="mode" series-rating="::seriesRating"
       is-collapsed="seriesRating.collapsed"
-      on-toggle="collapseChanged"
-      ng-hide="!matchSearch(seriesRating.name) || !seriesListVisible">
+      on-toggle="collapseChanged">
+      <!-- ng-hide="!matchSearch(seriesRating.name) || !seriesListVisible"> -->
     </series-item>
+    </div>
 
     <search-results query="searchQuery"
       on-select-series="addSeries" 

@@ -74,6 +74,7 @@ function Ratings($http) {
     this.json = {};
     this.list = [];
     this.changes = new Changes($http);
+    this.the = /^[T|t]he /;
 };
 Ratings.prototype = {
     get: function() {
@@ -90,7 +91,9 @@ Ratings.prototype = {
     },
     sortAlpha : function() {
         this.list.sort(function(a,b) { 
-            return a.name.localeCompare(b.name); 
+            a = a.name.replace(this.the, "");
+            b = b.name.replace(this.the, "");
+            return a.localeCompare(b); 
         });
     },
     initSeries: function(json) {

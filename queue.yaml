@@ -1,0 +1,6 @@
+queue:
+- name: tmdb-queue
+  mode: push
+  rate: 0.1/s
+  bucket_size: 1
+  max_concurrent_requests: 1

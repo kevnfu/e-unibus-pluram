@@ -479,43 +479,14 @@ class database:
         user_rating.set_series(series_id, series_name)
         user_rating.put()
         return True
-    
-    @classmethod
-    def sync_with_tmdb(cls):
-        """
-        Reloads shows to db that were changed in the last 24 hours
-        """
-        # Get changed ids from tmdb
-        changed_ids = TMDB.tv_changed_ids()
-
-        # track # of changes
-        updated_count = AppStat.get_by_id("daily_sync_count")
-        if not updated_count:
-            updated_count = AppStat(id="daily_sync_count", 
-                description="Number of seasons updated last night")
-        updated_count.value = 0
-
-        # if a show in db changed, update
-        new_series_list = list()
-        for changed_id in changed_ids:
-            series = Series.get_by_id(changed_id)
-            if series:
-                new_series = cls.update_series(series)
-                new_series_list.append(new_series)
-                logging.info("Updated series: %s" % changed_id)
-
-        updated_count.value = len(new_series_list)
-        updated_count.put()
-
-        ndb.put_multi(new_series_list)
-        return
 
     @classmethod
-    def update_series(cls, series):
+    def update_series(cls, series_id):
         """
         Refetches series, and refetches its seasons IF it has changes
         """
-        series_id = series.get_id()
+        series_id = int(series_id)
+        series = Series.get_by_id(series_id)
         seasons_changed = TMDB.seasons_changed_in_series(series_id)
         for season_number in seasons_changed:
             # refetch seasons that have changed
@@ -530,6 +501,9 @@ class database:
         
         # store seasons
         new_series.seasons = series.seasons
+        
+        new_series.put()
+        logging.info("Updated series: %s %s" % (series_id, series.name))
         
         return new_series
 

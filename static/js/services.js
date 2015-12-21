@@ -74,7 +74,7 @@ function Ratings($http) {
     this.json = {};
     this.list = [];
     this.changes = new Changes($http);
-    this.the = /^[T|t]he /;
+    this.the = /^the /i;
 };
 Ratings.prototype = {
     get: function() {
@@ -90,6 +90,7 @@ Ratings.prototype = {
             });
     },
     sortAlpha : function() {
+        // ignores leading "the"
         this.list.sort(function(a,b) { 
             a = a.name.replace(this.the, "");
             b = b.name.replace(this.the, "");

@@ -216,10 +216,6 @@ angular.module("app", ["ui.bootstrap", "ngAnimate", "services", "directives", "n
     $scope.episodeRating = undefined;
     $scope.episodeNotAired = !$scope.hasAired($scope.episodeJson.air_date);
     $scope.episodeRating = $scope.seasonRating.episodes[$scope.episodeNum];
-    // $scope.$on("ratings-ready", function() {
-    //     console.log("episode received ratings-ready");
-    //     $scope.episodeRating = $scope.seasonRating.episodes[$scope.episodeNum];
-    // });
 
     $scope.checkboxChanged = function() {
         $scope.Changes
